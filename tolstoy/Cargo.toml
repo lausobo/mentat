@@ -47,5 +47,5 @@ path = "../public-traits"
 path = "../transaction"
 
 [dependencies.rusqlite]
-version = "0.13"
+version = "0.38.0"
 features = ["limits"]

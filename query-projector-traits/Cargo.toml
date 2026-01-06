@@ -15,7 +15,7 @@ sqlcipher = ["rusqlite/sqlcipher"]
 anyhow = "1"
 thiserror = "1"
 [dependencies.rusqlite]
-version = "0.13"
+version = "0.38.0"
 features = ["limits"]
 
 [dependencies.edn]
