@@ -305,6 +305,7 @@ dependencies = [
  "ordered-float",
  "peg",
  "pretty",
+ "regex",
  "serde",
  "serde_derive",
  "serde_json",

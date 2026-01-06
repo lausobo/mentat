@@ -26,7 +26,9 @@ serde_test = "1.0"
 serde_json = "1.0"
 
 [features]
+cargo-clippy = []
 serde_support = ["serde", "serde_derive"]
 
 [build-dependencies]
-peg = "0.5"
+peg = "0.5.7"
+regex = "1"

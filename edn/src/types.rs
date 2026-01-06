@@ -25,7 +25,7 @@ use num::BigInt;
 use ordered_float::OrderedFloat;
 use uuid::Uuid;
 
-use symbols;
+use crate::symbols;
 
 /// Value represents one of the allowed values in an EDN string.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -136,7 +136,7 @@ impl Value {
     /// But right now, it's used in the bootstrapper.  We'll fix that soon.
     pub fn with_spans(self) -> ValueAndSpan {
         let s = self.to_pretty(120).unwrap();
-        use ::parse;
+        use crate::parse;
         let with_spans = parse::value(&s).unwrap();
         assert_eq!(self, with_spans.clone().without_spans());
         with_spans
@@ -209,7 +209,7 @@ macro_rules! def_is {
 macro_rules! def_as {
     ($name: ident, $kind: path, $t: ty, $( $transform: expr ),* ) => {
         pub fn $name(&self) -> Option<$t> {
-            match *self { $kind(v) => { $( let v = $transform(v) )*; Some(v) }, _ => None }
+            match *self { $kind(v) => { $( let v = $transform(v); )* Some(v) }, _ => None }
         }
     }
 }
@@ -231,7 +231,7 @@ macro_rules! def_as_ref {
 macro_rules! def_into {
     ($name: ident, $kind: path, $t: ty, $( $transform: expr ),* ) => {
         pub fn $name(self) -> Option<$t> {
-            match self { $kind(v) => { $( let v = $transform(v) )*; Some(v) }, _ => None }
+            match self { $kind(v) => { $( let v = $transform(v); )* Some(v) }, _ => None }
         }
     }
 }
@@ -242,26 +242,38 @@ macro_rules! def_into {
 /// # Examples
 ///
 /// ```
-/// # use edn::types::to_symbol;
+/// # use edn::to_symbol;
 /// # use edn::types::Value;
+/// # use edn::SpannedValue;
 /// # use edn::symbols;
-/// let value = to_symbol!("foo", "bar", Value);
+/// let namespace: Option<&str> = Some("foo");
+/// let value = to_symbol!(namespace, "bar", Value);
 /// assert_eq!(value, Value::NamespacedSymbol(symbols::NamespacedSymbol::namespaced("foo", "bar")));
 ///
-/// let value = to_symbol!(None, "baz", Value);
+/// let namespace: Option<&str> = None;
+/// let value = to_symbol!(namespace, "baz", Value);
 /// assert_eq!(value, Value::PlainSymbol(symbols::PlainSymbol::plain("baz")));
 ///
-/// let value = to_symbol!("foo", "bar", SpannedValue);
-/// assert_eq!(value.into(), to_symbol!("foo", "bar", Value));
+/// let namespace: Option<&str> = Some("foo");
+/// let value = to_symbol!(namespace, "bar", SpannedValue);
+/// let namespace: Option<&str> = Some("foo");
+/// assert_eq!(Value::from(value), to_symbol!(namespace, "bar", Value));
 ///
-/// let value = to_symbol!(None, "baz", SpannedValue);
-/// assert_eq!(value.into(), to_symbol!(None, "baz", Value));
+/// let namespace: Option<&str> = None;
+/// let value = to_symbol!(namespace, "baz", SpannedValue);
+/// let namespace: Option<&str> = None;
+/// assert_eq!(Value::from(value), to_symbol!(namespace, "baz", Value));
 /// ```
+#[macro_export]
 macro_rules! to_symbol {
     ( $namespace:expr, $name:expr, $t:tt ) => {
-        $namespace.into().map_or_else(
-            || $t::PlainSymbol(symbols::PlainSymbol::plain($name)),
-            |ns| $t::NamespacedSymbol(symbols::NamespacedSymbol::namespaced(ns, $name)))
+        {
+            let namespace: Option<&str> = $namespace.into();
+            match namespace {
+                None => $t::PlainSymbol($crate::symbols::PlainSymbol::plain($name)),
+                Some(ns) => $t::NamespacedSymbol($crate::symbols::NamespacedSymbol::namespaced(ns, $name)),
+            }
+        }
     }
 }
 
@@ -271,26 +283,38 @@ macro_rules! to_symbol {
 /// # Examples
 ///
 /// ```
-/// # use edn::types::to_keyword;
+/// # use edn::to_keyword;
 /// # use edn::types::Value;
+/// # use edn::SpannedValue;
 /// # use edn::symbols;
-/// let value = to_keyword!("foo", "bar", Value);
+/// let namespace: Option<&str> = Some("foo");
+/// let value = to_keyword!(namespace, "bar", Value);
 /// assert_eq!(value, Value::Keyword(symbols::Keyword::namespaced("foo", "bar")));
 ///
-/// let value = to_keyword!(None, "baz", Value);
+/// let namespace: Option<&str> = None;
+/// let value = to_keyword!(namespace, "baz", Value);
 /// assert_eq!(value, Value::Keyword(symbols::Keyword::plain("baz")));
 ///
-/// let value = to_keyword!("foo", "bar", SpannedValue);
-/// assert_eq!(value.into(), to_keyword!("foo", "bar", Value));
+/// let namespace: Option<&str> = Some("foo");
+/// let value = to_keyword!(namespace, "bar", SpannedValue);
+/// let namespace: Option<&str> = Some("foo");
+/// assert_eq!(Value::from(value), to_keyword!(namespace, "bar", Value));
 ///
-/// let value = to_keyword!(None, "baz", SpannedValue);
-/// assert_eq!(value.into(), to_keyword!(None, "baz", Value));
+/// let namespace: Option<&str> = None;
+/// let value = to_keyword!(namespace, "baz", SpannedValue);
+/// let namespace: Option<&str> = None;
+/// assert_eq!(Value::from(value), to_keyword!(namespace, "baz", Value));
 /// ```
+#[macro_export]
 macro_rules! to_keyword {
     ( $namespace:expr, $name:expr, $t:tt ) => {
-        $namespace.into().map_or_else(
-            || $t::Keyword(symbols::Keyword::plain($name)),
-            |ns| $t::Keyword(symbols::Keyword::namespaced(ns, $name)))
+        {
+            let namespace: Option<&str> = $namespace.into();
+            match namespace {
+                None => $t::Keyword($crate::symbols::Keyword::plain($name)),
+                Some(ns) => $t::Keyword($crate::symbols::Keyword::namespaced(ns, $name)),
+            }
+        }
     }
 }
 
@@ -633,7 +657,9 @@ pub trait FromMicros {
 
 impl FromMicros for DateTime<Utc> {
     fn from_micros(ts: i64) -> Self {
-        Utc.timestamp(ts / 1_000_000, ((ts % 1_000_000).abs() as u32) * 1_000)
+        Utc.timestamp_opt(ts / 1_000_000, ((ts % 1_000_000).abs() as u32) * 1_000)
+            .single()
+            .unwrap()
     }
 }
 
@@ -655,7 +681,9 @@ pub trait FromMillis {
 
 impl FromMillis for DateTime<Utc> {
     fn from_millis(ts: i64) -> Self {
-        Utc.timestamp(ts / 1_000, ((ts % 1_000).abs() as u32) * 1_000)
+        Utc.timestamp_opt(ts / 1_000, ((ts % 1_000).abs() as u32) * 1_000)
+            .single()
+            .unwrap()
     }
 }
 
@@ -684,7 +712,7 @@ mod test {
     use std::iter::FromIterator;
     use std::f64;
 
-    use parse;
+    use crate::parse;
 
     use chrono::{
         DateTime,

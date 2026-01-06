@@ -12,13 +12,12 @@ use chrono::{
     SecondsFormat,
 };
 
-use itertools::Itertools;
 use pretty;
 
 use std::io;
 use std::borrow::Cow;
 
-use types::Value;
+use crate::types::Value;
 
 impl Value {
     /// Return a pretty string representation of this `Value`.
@@ -45,7 +44,10 @@ impl Value {
     where A: pretty::DocAllocator<'a>, T: Into<Cow<'a, str>>, I: IntoIterator<Item=&'a Value> {
         let open = open.into();
         let n = open.len();
-        let i = vs.into_iter().map(|v| v.as_doc(allocator)).intersperse(allocator.space());
+        let i = itertools::Itertools::intersperse(
+            vs.into_iter().map(|v| v.as_doc(allocator)),
+            allocator.space(),
+        );
         allocator.text(open)
             .append(allocator.concat(i).nest(n))
             .append(allocator.text(close))
@@ -62,7 +64,12 @@ impl Value {
             Value::List(ref vs) => self.bracket(pp, "(", vs, ")"),
             Value::Set(ref vs) => self.bracket(pp, "#{", vs, "}"),
             Value::Map(ref vs) => {
-                let xs = vs.iter().rev().map(|(k, v)| k.as_doc(pp).append(pp.space()).append(v.as_doc(pp)).group()).intersperse(pp.space());
+                let xs = itertools::Itertools::intersperse(
+                    vs.iter()
+                        .rev()
+                        .map(|(k, v)| k.as_doc(pp).append(pp.space()).append(v.as_doc(pp)).group()),
+                    pp.space(),
+                );
                 pp.text("{")
                     .append(pp.concat(xs).nest(1))
                     .append(pp.text("}"))
@@ -81,7 +88,7 @@ impl Value {
 
 #[cfg(test)]
 mod test {
-    use parse;
+    use crate::parse;
 
     #[test]
     fn test_pp_io() {

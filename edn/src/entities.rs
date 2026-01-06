@@ -13,18 +13,14 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use value_rc::{
-    ValueRc,
-};
+use crate::value_rc::ValueRc;
 
-use symbols::{
+use crate::symbols::{
     Keyword,
     PlainSymbol,
 };
 
-use types::{
-    ValueAndSpan,
-};
+use crate::types::ValueAndSpan;
 
 /// `EntityPlace` and `ValuePlace` embed values, either directly (i.e., `ValuePlace::Atom`) or
 /// indirectly (i.e., `EntityPlace::LookupRef`).  In order to maintain the graph of `Into` and
@@ -187,8 +183,20 @@ pub enum EntityPlace<V> {
     TxFunction(TxFunction),
 }
 
-impl<V, E: Into<EntidOrIdent>> From<E> for EntityPlace<V> {
-    fn from(v: E) -> Self {
+impl<V> From<EntidOrIdent> for EntityPlace<V> {
+    fn from(v: EntidOrIdent) -> Self {
+        EntityPlace::Entid(v)
+    }
+}
+
+impl<V> From<i64> for EntityPlace<V> {
+    fn from(v: i64) -> Self {
+        EntityPlace::Entid(v.into())
+    }
+}
+
+impl<V> From<Keyword> for EntityPlace<V> {
+    fn from(v: Keyword) -> Self {
         EntityPlace::Entid(v.into())
     }
 }
@@ -222,8 +230,20 @@ pub enum AttributePlace {
     Entid(EntidOrIdent),
 }
 
-impl<A: Into<EntidOrIdent>> From<A> for AttributePlace {
-    fn from(v: A) -> Self {
+impl From<EntidOrIdent> for AttributePlace {
+    fn from(v: EntidOrIdent) -> Self {
+        AttributePlace::Entid(v)
+    }
+}
+
+impl From<i64> for AttributePlace {
+    fn from(v: i64) -> Self {
+        AttributePlace::Entid(v.into())
+    }
+}
+
+impl From<Keyword> for AttributePlace {
+    fn from(v: Keyword) -> Self {
         AttributePlace::Entid(v.into())
     }
 }
