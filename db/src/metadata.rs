@@ -24,8 +24,6 @@
 //!
 //! This module recognizes, validates, applies, and reports on these mutations.
 
-use failure::ResultExt;
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::collections::btree_map::Entry;
 
@@ -37,6 +35,7 @@ use entids;
 use db_traits::errors::{
     DbErrorKind,
     Result,
+    ResultExt,
 };
 
 use core_traits::{

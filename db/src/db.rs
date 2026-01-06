@@ -10,10 +10,6 @@
 
 #![allow(dead_code)]
 
-use failure::{
-    ResultExt,
-};
-
 use std::collections::HashMap;
 use std::collections::hash_map::{
     Entry,
@@ -62,6 +58,7 @@ use mentat_core::{
 use db_traits::errors::{
     DbErrorKind,
     Result,
+    ResultExt,
 };
 
 use metadata;

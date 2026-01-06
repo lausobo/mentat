@@ -14,8 +14,8 @@ sqlcipher = ["rusqlite/sqlcipher"]
 syncable = ["tolstoy_traits", "hyper", "serde_json"]
 
 [dependencies]
-failure = "0.1.1"
-failure_derive = "0.1.1"
+anyhow = "1"
+thiserror = "1"
 uuid = "0.5"
 
 [dependencies.rusqlite]

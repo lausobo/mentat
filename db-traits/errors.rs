@@ -10,11 +10,9 @@
 
 #![allow(dead_code)]
 
-use failure::{
-    Backtrace,
-    Context,
-    Fail,
-};
+use std::error::Error as StdError;
+
+use thiserror::Error;
 
 use std::collections::{
     BTreeMap,
@@ -55,7 +53,7 @@ pub enum CardinalityConflict {
 }
 
 // TODO Error/ErrorKind pair
-#[derive(Clone, Debug, Eq, PartialEq, Fail)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SchemaConstraintViolation {
     /// A transaction tried to assert datoms where one tempid upserts to two (or more) distinct
     /// entids.
@@ -80,6 +78,8 @@ pub enum SchemaConstraintViolation {
         conflicts: Vec<CardinalityConflict>,
     },
 }
+
+impl StdError for SchemaConstraintViolation {}
 
 impl ::std::fmt::Display for SchemaConstraintViolation {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -110,7 +110,7 @@ impl ::std::fmt::Display for SchemaConstraintViolation {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum InputError {
     /// Map notation included a bad `:db/id` value.
     BadDbId,
@@ -119,6 +119,8 @@ pub enum InputError {
     /// notation).
     BadEntityPlace,
 }
+
+impl StdError for InputError {}
 
 impl ::std::fmt::Display for InputError {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -134,65 +136,57 @@ impl ::std::fmt::Display for InputError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("{kind}")]
 pub struct DbError {
-    inner: Context<DbErrorKind>,
-}
-
-impl ::std::fmt::Display for DbError {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::std::fmt::Display::fmt(&self.inner, f)
-    }
-}
-
-impl Fail for DbError {
-    fn cause(&self) -> Option<&Fail> {
-        self.inner.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
-    }
+    kind: DbErrorKind,
+    #[source]
+    source: Option<Box<dyn StdError + Send + Sync>>,
 }
 
 impl DbError {
     pub fn kind(&self) -> DbErrorKind {
-        self.inner.get_context().clone()
+        self.kind.clone()
+    }
+
+    pub fn with_source<E>(kind: DbErrorKind, source: E) -> DbError
+    where
+        E: StdError + Send + Sync + 'static,
+    {
+        DbError {
+            kind,
+            source: Some(Box::new(source)),
+        }
     }
 }
 
 impl From<DbErrorKind> for DbError {
     fn from(kind: DbErrorKind) -> DbError {
-        DbError { inner: Context::new(kind) }
-    }
-}
-
-impl From<Context<DbErrorKind>> for DbError {
-    fn from(inner: Context<DbErrorKind>) -> DbError {
-        DbError { inner: inner }
+        DbError { kind, source: None }
     }
 }
 
 impl From<rusqlite::Error> for DbError {
     fn from(error: rusqlite::Error) -> DbError {
-        DbError { inner: Context::new(DbErrorKind::RusqliteError(error.to_string())) }
+        let message = error.to_string();
+        DbError::with_source(DbErrorKind::RusqliteError(message), error)
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Fail)]
+#[derive(Clone, PartialEq, Debug, Error)]
 pub enum DbErrorKind {
     /// We're just not done yet.  Message that the feature is recognized but not yet
     /// implemented.
-    #[fail(display = "not yet implemented: {}", _0)]
+    #[error("not yet implemented: {0}")]
     NotYetImplemented(String),
 
     /// We've been given a value that isn't the correct Mentat type.
-    #[fail(display = "value '{}' is not the expected Mentat value type {:?}", _0, _1)]
+    #[error("value '{0}' is not the expected Mentat value type {1:?}")]
     BadValuePair(String, ValueType),
 
     /// We've got corrupt data in the SQL store: a value and value_type_tag don't line up.
     /// TODO _1.data_type()
-    #[fail(display = "bad SQL (value_type_tag, value) pair: ({:?}, {:?})", _0, _1)]
+    #[error("bad SQL (value_type_tag, value) pair: ({0:?}, {1:?})")]
     BadSQLValuePair(rusqlite::types::Value, i32),
 
     // /// The SQLite store user_version isn't recognized.  This could be an old version of Mentat
@@ -202,100 +196,113 @@ pub enum DbErrorKind {
 
     /// A bootstrap definition couldn't be parsed or installed.  This is a programmer error, not
     /// a runtime error.
-    #[fail(display = "bad bootstrap definition: {}", _0)]
+    #[error("bad bootstrap definition: {0}")]
     BadBootstrapDefinition(String),
 
     /// A schema assertion couldn't be parsed.
-    #[fail(display = "bad schema assertion: {}", _0)]
+    #[error("bad schema assertion: {0}")]
     BadSchemaAssertion(String),
 
     /// An ident->entid mapping failed.
-    #[fail(display = "no entid found for ident: {}", _0)]
+    #[error("no entid found for ident: {0}")]
     UnrecognizedIdent(String),
 
     /// An entid->ident mapping failed.
-    #[fail(display = "no ident found for entid: {}", _0)]
+    #[error("no ident found for entid: {0}")]
     UnrecognizedEntid(Entid),
 
     /// Tried to transact an entid that isn't allocated.
-    #[fail(display = "entid not allocated: {}", _0)]
+    #[error("entid not allocated: {0}")]
     UnallocatedEntid(Entid),
 
-    #[fail(display = "unknown attribute for entid: {}", _0)]
+    #[error("unknown attribute for entid: {0}")]
     UnknownAttribute(Entid),
 
-    #[fail(display = "cannot reverse-cache non-unique attribute: {}", _0)]
+    #[error("cannot reverse-cache non-unique attribute: {0}")]
     CannotCacheNonUniqueAttributeInReverse(Entid),
 
-    #[fail(display = "schema alteration failed: {}", _0)]
+    #[error("schema alteration failed: {0}")]
     SchemaAlterationFailed(String),
 
     /// A transaction tried to violate a constraint of the schema of the Mentat store.
-    #[fail(display = "schema constraint violation: {}", _0)]
+    #[error("schema constraint violation: {0}")]
     SchemaConstraintViolation(SchemaConstraintViolation),
 
     /// The transaction was malformed in some way (that was not recognized at parse time; for
     /// example, in a way that is schema-dependent).
-    #[fail(display = "transaction input error: {}", _0)]
+    #[error("transaction input error: {0}")]
     InputError(InputError),
 
-    #[fail(display = "Cannot transact a fulltext assertion with a typed value that is not :db/valueType :db.type/string")]
+    #[error("Cannot transact a fulltext assertion with a typed value that is not :db/valueType :db.type/string")]
     WrongTypeValueForFtsAssertion,
 
     // SQL errors.
-    #[fail(display = "could not update a cache")]
+    #[error("could not update a cache")]
     CacheUpdateFailed,
 
-    #[fail(display = "Could not set_user_version")]
+    #[error("Could not set_user_version")]
     CouldNotSetVersionPragma,
 
-    #[fail(display = "Could not get_user_version")]
+    #[error("Could not get_user_version")]
     CouldNotGetVersionPragma,
 
-    #[fail(display = "Could not search!")]
+    #[error("Could not search!")]
     CouldNotSearch,
 
-    #[fail(display = "Could not insert transaction: failed to add datoms not already present")]
+    #[error("Could not insert transaction: failed to add datoms not already present")]
     TxInsertFailedToAddMissingDatoms,
 
-    #[fail(display = "Could not insert transaction: failed to retract datoms already present")]
+    #[error("Could not insert transaction: failed to retract datoms already present")]
     TxInsertFailedToRetractDatoms,
 
-    #[fail(display = "Could not update datoms: failed to retract datoms already present")]
+    #[error("Could not update datoms: failed to retract datoms already present")]
     DatomsUpdateFailedToRetract,
 
-    #[fail(display = "Could not update datoms: failed to add datoms not already present")]
+    #[error("Could not update datoms: failed to add datoms not already present")]
     DatomsUpdateFailedToAdd,
 
-    #[fail(display = "Failed to create temporary tables")]
+    #[error("Failed to create temporary tables")]
     FailedToCreateTempTables,
 
-    #[fail(display = "Could not insert non-fts one statements into temporary search table!")]
+    #[error("Could not insert non-fts one statements into temporary search table!")]
     NonFtsInsertionIntoTempSearchTableFailed,
 
-    #[fail(display = "Could not insert fts values into fts table!")]
+    #[error("Could not insert fts values into fts table!")]
     FtsInsertionFailed,
 
-    #[fail(display = "Could not insert FTS statements into temporary search table!")]
+    #[error("Could not insert FTS statements into temporary search table!")]
     FtsInsertionIntoTempSearchTableFailed,
 
-    #[fail(display = "Could not drop FTS search ids!")]
+    #[error("Could not drop FTS search ids!")]
     FtsFailedToDropSearchIds,
 
-    #[fail(display = "Could not update partition map")]
+    #[error("Could not update partition map")]
     FailedToUpdatePartitionMap,
 
-    #[fail(display = "Can't operate over mixed timelines")]
+    #[error("Can't operate over mixed timelines")]
     TimelinesMixed,
 
-    #[fail(display = "Can't move transactions to a non-empty timeline")]
+    #[error("Can't move transactions to a non-empty timeline")]
     TimelinesMoveToNonEmpty,
 
-    #[fail(display = "Supplied an invalid transaction range")]
+    #[error("Supplied an invalid transaction range")]
     TimelinesInvalidRange,
 
     // It would be better to capture the underlying `rusqlite::Error`, but that type doesn't
     // implement many useful traits, including `Clone`, `Eq`, and `PartialEq`.
-    #[fail(display = "SQL error: {}", _0)]
+    #[error("SQL error: {0}")]
     RusqliteError(String),
+}
+
+pub trait ResultExt<T> {
+    fn context(self, kind: DbErrorKind) -> Result<T>;
+}
+
+impl<T, E> ResultExt<T> for ::std::result::Result<T, E>
+where
+    E: StdError + Send + Sync + 'static,
+{
+    fn context(self, kind: DbErrorKind) -> Result<T> {
+        self.map_err(|err| DbError::with_source(kind, err))
+    }
 }

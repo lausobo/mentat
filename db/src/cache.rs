@@ -72,10 +72,6 @@ use std::sync::Arc;
 
 use std::iter::Peekable;
 
-use failure::{
-    ResultExt,
-};
-
 use rusqlite;
 
 use core_traits::{
@@ -114,6 +110,7 @@ use db_traits::errors::{
     DbError,
     DbErrorKind,
     Result,
+    ResultExt,
 };
 
 use watcher::{

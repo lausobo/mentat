@@ -34,10 +34,7 @@ use CliError;
 
 use edn;
 
-use failure::{
-    Compat,
-    Error,
-};
+use anyhow::Error;
 
 use mentat::{
     CacheDirection,
@@ -193,9 +190,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
     let edn_arg_parser = || spaces()
                             .with(look_ahead(string("[").or(string("{")))
                                 .with(many1::<Vec<_>, _>(try(any())))
-                                .and_then(|args| -> Result<String, Compat<Error>> {
-                                    Ok(args.iter().collect())
-                                })
+                                .map(|args| args.iter().collect())
                             );
 
     let no_arg_parser = || arguments()

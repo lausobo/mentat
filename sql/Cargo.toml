@@ -8,7 +8,7 @@ workspace = ".."
 sqlcipher = ["rusqlite/sqlcipher"]
 
 [dependencies]
-failure = "0.1.1"
+anyhow = "1"
 ordered-float = "0.5"
 
 [dependencies.rusqlite]

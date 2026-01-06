@@ -32,7 +32,7 @@ use command_parser::{
     command,
 };
 
-use failure::Error;
+use anyhow::Error;
 
 /// Starting prompt
 const DEFAULT_PROMPT: &'static str = "mentat=> ";
