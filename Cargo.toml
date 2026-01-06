@@ -13,6 +13,7 @@ authors = [
 ]
 name = "mentat"
 version = "0.11.1"
+edition = "2024"
 build = "build/version.rs"
 
 [features]
