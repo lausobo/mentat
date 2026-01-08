@@ -304,7 +304,7 @@ impl Vocabularies {
         self.0.get(name)
     }
 
-    pub fn iter(&self) -> ::std::collections::btree_map::Iter<Keyword, Vocabulary> {
+    pub fn iter(&self) -> ::std::collections::btree_map::Iter<'_, Keyword, Vocabulary> {
         self.0.iter()
     }
 }
@@ -630,7 +630,7 @@ pub trait VersionedStore: HasVocabularies + HasSchema {
 /// vocabularies — you can retrieve the requested definition and the resulting `VocabularyCheck`
 /// by name.
 pub trait VocabularyStatus {
-    fn get(&self, name: &Keyword) -> Option<(&Definition, &VocabularyCheck)>;
+    fn get(&self, name: &Keyword) -> Option<(&Definition, &VocabularyCheck<'_>)>;
     fn version(&self, name: &Keyword) -> Option<Version>;
 }
 
@@ -650,7 +650,7 @@ impl<'a> CheckedVocabularies<'a> {
 }
 
 impl<'a> VocabularyStatus for CheckedVocabularies<'a> {
-    fn get(&self, name: &Keyword) -> Option<(&Definition, &VocabularyCheck)> {
+    fn get(&self, name: &Keyword) -> Option<(&Definition, &VocabularyCheck<'_>)> {
         self.items.get(name).map(|&(ref d, ref c)| (*d, c))
     }
 

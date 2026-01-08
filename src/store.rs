@@ -201,7 +201,7 @@ impl Queryable for Store {
         self.conn.q_once(&self.sqlite, query, inputs)
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
         where T: Into<Option<QueryInputs>> {
         self.conn.q_prepare(&self.sqlite, query, inputs)
     }

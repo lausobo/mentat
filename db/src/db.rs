@@ -276,7 +276,7 @@ fn get_user_version(conn: &rusqlite::Connection) -> Result<i32> {
 }
 
 /// Do just enough work that either `create_current_version` or sync can populate the DB.
-pub fn create_empty_current_version(conn: &mut rusqlite::Connection) -> Result<(rusqlite::Transaction, DB)> {
+pub fn create_empty_current_version(conn: &mut rusqlite::Connection) -> Result<(rusqlite::Transaction<'_>, DB)> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Exclusive)?;
 
     for statement in (&V1_STATEMENTS).iter() {
