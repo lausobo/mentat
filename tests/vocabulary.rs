@@ -994,7 +994,7 @@ fn test_upgrade_with_functions() {
                         TypedValue::typed_string("Deprecated. Use :movie/likes or :food/likes instead."))?;
             ip.transact_builder(builder).and(Ok(())).map_err(|e| e.into())
         }
-    };
+    }
 
     {
         let mut in_progress = store.begin_transaction().expect("began");
