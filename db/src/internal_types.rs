@@ -47,10 +47,10 @@ use db_traits::errors::{
     DbErrorKind,
     Result,
 };
-use schema::{
+use crate::schema::{
     SchemaTypeChecking,
 };
-use types::{
+use crate::types::{
     AVMap,
     AVPair,
     Schema,

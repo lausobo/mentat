@@ -33,26 +33,26 @@ use edn::{
 
 use edn::entities::OpType;
 
-use db;
-use db::{
+use crate::db;
+use crate::db::{
     TypedSQLValue,
 };
 
-use tx::{
+use crate::tx::{
     transact_terms_with_action,
     TransactorAction,
 };
 
-use types::{
+use crate::types::{
     PartitionMap,
 };
 
-use internal_types::{
+use crate::internal_types::{
     Term,
     TermWithoutTempIds,
 };
 
-use watcher::{
+use crate::watcher::{
     NullWatcher,
 };
 
@@ -61,7 +61,7 @@ use watcher::{
 fn collect_ordered_txs_to_move(conn: &rusqlite::Connection, txs_from: RangeFrom<Entid>, timeline: Entid) -> Result<Vec<Entid>> {
     let mut stmt = conn.prepare("SELECT tx, timeline FROM timelined_transactions WHERE tx >= ? AND timeline = ? GROUP BY tx ORDER BY tx DESC")?;
     let mut rows = stmt.query_and_then(&[&txs_from.start, &timeline], |row: &rusqlite::Row| -> Result<(Entid, Entid)>{
-        Ok((row.get_checked(0)?, row.get_checked(1)?))
+        Ok((row.get(0)?, row.get(1)?))
     })?;
 
     let mut txs = vec![];
@@ -89,11 +89,12 @@ fn collect_ordered_txs_to_move(conn: &rusqlite::Connection, txs_from: RangeFrom<
 
 fn move_transactions_to(conn: &rusqlite::Connection, tx_ids: &[Entid], new_timeline: Entid) -> Result<()> {
     // Move specified transactions over to a specified timeline.
+    let params: Vec<&dyn rusqlite::types::ToSql> = tx_ids.iter().map(|x| x as &dyn rusqlite::types::ToSql).collect();
     conn.execute(&format!(
         "UPDATE timelined_transactions SET timeline = {} WHERE tx IN {}",
             new_timeline,
-            ::repeat_values(tx_ids.len(), 1)
-        ), &(tx_ids.iter().map(|x| x as &rusqlite::types::ToSql).collect::<Vec<_>>())
+            crate::repeat_values(tx_ids.len(), 1)
+        ), params.as_slice()
     )?;
     Ok(())
 }
@@ -106,7 +107,7 @@ fn remove_tx_from_datoms(conn: &rusqlite::Connection, tx_id: Entid) -> Result<()
 fn is_timeline_empty(conn: &rusqlite::Connection, timeline: Entid) -> Result<bool> {
     let mut stmt = conn.prepare("SELECT timeline FROM timelined_transactions WHERE timeline = ? GROUP BY timeline")?;
     let rows = stmt.query_and_then(&[&timeline], |row| -> Result<i64> {
-        Ok(row.get_checked(0)?)
+        Ok(row.get(0)?)
     })?;
     Ok(rows.count() == 0)
 }
@@ -114,16 +115,16 @@ fn is_timeline_empty(conn: &rusqlite::Connection, timeline: Entid) -> Result<boo
 /// Get terms for tx_id, reversing them in meaning (swap add & retract).
 fn reversed_terms_for(conn: &rusqlite::Connection, tx_id: Entid) -> Result<Vec<TermWithoutTempIds>> {
     let mut stmt = conn.prepare("SELECT e, a, v, value_type_tag, tx, added FROM timelined_transactions WHERE tx = ? AND timeline = ? ORDER BY tx DESC")?;
-    let mut rows = stmt.query_and_then(&[&tx_id, &::TIMELINE_MAIN], |row| -> Result<TermWithoutTempIds> {
-        let op = match row.get_checked(5)? {
+    let mut rows = stmt.query_and_then(&[&tx_id, &crate::TIMELINE_MAIN], |row| -> Result<TermWithoutTempIds> {
+        let op = match row.get(5)? {
             true => OpType::Retract,
             false => OpType::Add
         };
         Ok(Term::AddOrRetract(
             op,
-            KnownEntid(row.get_checked(0)?),
-            row.get_checked(1)?,
-            TypedValue::from_sql_value_pair(row.get_checked(2)?, row.get_checked(3)?)?,
+            KnownEntid(row.get(0)?),
+            row.get(1)?,
+            TypedValue::from_sql_value_pair(row.get(2)?, row.get(3)?)?,
         ))
     })?;
 
@@ -139,7 +140,7 @@ fn reversed_terms_for(conn: &rusqlite::Connection, tx_id: Entid) -> Result<Vec<T
 pub fn move_from_main_timeline(conn: &rusqlite::Connection, schema: &Schema,
     partition_map: PartitionMap, txs_from: RangeFrom<Entid>, new_timeline: Entid) -> Result<(Option<Schema>, PartitionMap)> {
 
-    if new_timeline == ::TIMELINE_MAIN {
+    if new_timeline == crate::TIMELINE_MAIN {
         bail!(DbErrorKind::NotYetImplemented(format!("Can't move transactions to main timeline")));
     }
 
@@ -150,7 +151,7 @@ pub fn move_from_main_timeline(conn: &rusqlite::Connection, schema: &Schema,
         bail!(DbErrorKind::TimelinesMoveToNonEmpty);
     }
 
-    let txs_to_move = collect_ordered_txs_to_move(conn, txs_from, ::TIMELINE_MAIN)?;
+    let txs_to_move = collect_ordered_txs_to_move(conn, txs_from, crate::TIMELINE_MAIN)?;
 
     let mut last_schema = None;
     for tx_id in &txs_to_move {
@@ -192,11 +193,11 @@ mod tests {
         Borrow,
     };
 
-    use debug::{
+    use crate::debug::{
         TestConn,
     };
 
-    use bootstrap;
+    use crate::bootstrap;
 
     // For convenience during testing.
     // Real consumers will perform similar operations when appropriate.

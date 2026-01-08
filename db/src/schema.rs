@@ -10,7 +10,7 @@
 
 #![allow(dead_code)]
 
-use db::TypedSQLValue;
+use crate::db::TypedSQLValue;
 use edn;
 use db_traits::errors::{
     DbErrorKind,
@@ -34,8 +34,8 @@ use mentat_core::{
     Schema,
     AttributeMap,
 };
-use metadata;
-use metadata::{
+use crate::metadata;
+use crate::metadata::{
     AttributeAlteration,
 };
 

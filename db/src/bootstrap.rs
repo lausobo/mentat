@@ -17,8 +17,8 @@ use db_traits::errors::{
 };
 use edn::types::Value;
 use edn::symbols;
-use entids;
-use db::TypedSQLValue;
+use crate::entids;
+use crate::db::TypedSQLValue;
 use edn::entities::Entity;
 
 use core_traits::{
@@ -30,8 +30,8 @@ use mentat_core::{
     IdentMap,
     Schema,
 };
-use schema::SchemaBuilding;
-use types::{Partition, PartitionMap};
+use crate::schema::SchemaBuilding;
+use crate::types::{Partition, PartitionMap};
 
 /// The first transaction ID applied to the knowledge base.
 ///
@@ -96,7 +96,7 @@ lazy_static! {
         ]
     };
 
-    static ref V1_CORE_SCHEMA: [(symbols::Keyword); 16] = {
+    static ref V1_CORE_SCHEMA: [symbols::Keyword; 16] = {
             [(ns_keyword!("db", "ident")),
              (ns_keyword!("db.install", "partition")),
              (ns_keyword!("db.install", "valueType")),

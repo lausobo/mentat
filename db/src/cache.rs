@@ -102,7 +102,7 @@ use edn::entities::{
     OpType,
 };
 
-use db::{
+use crate::db::{
     TypedSQLValue,
 };
 
@@ -113,7 +113,7 @@ use db_traits::errors::{
     ResultExt,
 };
 
-use watcher::{
+use crate::watcher::{
     TransactWatcher,
 };
 
@@ -221,10 +221,10 @@ impl AevFactory {
     }
 
     fn row_to_aev(&mut self, row: &rusqlite::Row) -> Aev {
-        let a: Entid = row.get(0);
-        let e: Entid = row.get(1);
-        let value_type_tag: i32 = row.get(3);
-        let v = TypedValue::from_sql_value_pair(row.get(2), value_type_tag).map(|x| x).unwrap();
+        let a: Entid = row.get_unwrap(0);
+        let e: Entid = row.get_unwrap(1);
+        let value_type_tag: i32 = row.get_unwrap(3);
+        let v = TypedValue::from_sql_value_pair(row.get_unwrap(2), value_type_tag).map(|x| x).unwrap();
         (a, e, self.intern(v))
     }
 }
@@ -235,7 +235,10 @@ pub struct AevRows<'conn, F> {
 
 /// Unwrap the Result from MappedRows. We could also use this opportunity to map_err it, but
 /// for now it's convenient to avoid error handling.
-impl<'conn, F> Iterator for AevRows<'conn, F> where F: FnMut(&rusqlite::Row) -> Aev {
+impl<'conn, F> Iterator for AevRows<'conn, F>
+where
+    F: FnMut(&rusqlite::Row) -> rusqlite::Result<Aev>,
+{
     type Item = Aev;
     fn next(&mut self) -> Option<Aev> {
         self.rows
@@ -268,8 +271,6 @@ trait CardinalityOneCache: RemoveFromCache + ClearCache {
 
 trait CardinalityManyCache: RemoveFromCache + ClearCache {
     fn acc(&mut self, e: Entid, v: TypedValue);
-    fn set(&mut self, e: Entid, vs: Vec<TypedValue>);
-    fn get(&self, e: Entid) -> Option<&Vec<TypedValue>>;
 }
 
 #[derive(Clone, Debug, Default)]
@@ -389,14 +390,6 @@ impl RemoveFromCache for MultiValAttributeCache {
 impl CardinalityManyCache for MultiValAttributeCache {
     fn acc(&mut self, e: Entid, v: TypedValue) {
         self.e_vs.entry(e).or_insert(vec![]).push(v)
-    }
-
-    fn set(&mut self, e: Entid, vs: Vec<TypedValue>) {
-        self.e_vs.insert(e, vs);
-    }
-
-    fn get(&self, e: Entid) -> Option<&Vec<TypedValue>> {
-        self.e_vs.get(&e)
     }
 }
 
@@ -894,7 +887,7 @@ impl AttributeCaches {
         let is_fulltext = schema.attribute_for_entid(attribute).map_or(false, |s| s.fulltext);
         let table = if is_fulltext { "fulltext_datoms" } else { "datoms" };
         let sql = format!("SELECT a, e, v, value_type_tag FROM {} WHERE a = ? ORDER BY a ASC, e ASC", table);
-        let args: Vec<&rusqlite::types::ToSql> = vec![&attribute];
+        let args: Vec<&dyn rusqlite::types::ToSql> = vec![&attribute];
         let mut stmt = sqlite.prepare(&sql).context(DbErrorKind::CacheUpdateFailed)?;
         let replacing = true;
         self.repopulate_from_aevt(schema, &mut stmt, args, replacing)
@@ -903,10 +896,10 @@ impl AttributeCaches {
     fn repopulate_from_aevt<'a, 's, 'c, 'v>(&'a mut self,
                                             schema: &'s Schema,
                                             statement: &'c mut rusqlite::Statement,
-                                            args: Vec<&'v rusqlite::types::ToSql>,
+                                            args: Vec<&'v dyn rusqlite::types::ToSql>,
                                             replacing: bool) -> Result<()> {
         let mut aev_factory = AevFactory::new();
-        let rows = statement.query_map(&args, |row| aev_factory.row_to_aev(row))?;
+        let rows = statement.query_map(args.as_slice(), |row| Ok(aev_factory.row_to_aev(row)))?;
         let aevs = AevRows {
             rows: rows,
         };
@@ -1030,16 +1023,16 @@ impl AttributeCaches {
     /// Return a reference to the cache for the provided `a`, if `a` names an attribute that is
     /// cached in the forward direction. If `a` doesn't name an attribute, or it's not cached at
     /// all, or it's only cached in reverse (`v` to `e`, not `e` to `v`), `None` is returned.
-    pub fn forward_attribute_cache_for_attribute<'a, 's>(&'a self, schema: &'s Schema, a: Entid) -> Option<&'a AttributeCache> {
+    pub fn forward_attribute_cache_for_attribute<'a, 's>(&'a self, schema: &'s Schema, a: Entid) -> Option<&'a dyn AttributeCache> {
         if !self.forward_cached_attributes.contains(&a) {
             return None;
         }
         schema.attribute_for_entid(a)
               .and_then(|attr|
                 if attr.multival {
-                    self.multi_vals.get(&a).map(|v| v as &AttributeCache)
+                    self.multi_vals.get(&a).map(|v| v as &dyn AttributeCache)
                 } else {
-                    self.single_vals.get(&a).map(|v| v as &AttributeCache)
+                    self.single_vals.get(&a).map(|v| v as &dyn AttributeCache)
                 })
     }
 

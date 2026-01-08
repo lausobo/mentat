@@ -27,11 +27,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::collections::btree_map::Entry;
 
-use add_retract_alter_set::{
+use crate::add_retract_alter_set::{
     AddRetractAlterSet,
 };
 use edn::symbols;
-use entids;
+use crate::entids;
 use db_traits::errors::{
     DbErrorKind,
     Result,
@@ -50,12 +50,12 @@ use mentat_core::{
     AttributeMap,
 };
 
-use schema::{
+use crate::schema::{
     AttributeBuilder,
     AttributeValidation,
 };
 
-use types::{
+use crate::types::{
     EAV,
 };
 

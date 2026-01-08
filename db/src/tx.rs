@@ -57,21 +57,21 @@ use std::iter::{
     once,
 };
 
-use db;
-use db::{
+use crate::db;
+use crate::db::{
     MentatStoring,
 };
 use edn::{
     InternSet,
     Keyword,
 };
-use entids;
+use crate::entids;
 use db_traits::errors as errors;
 use db_traits::errors::{
     DbErrorKind,
     Result,
 };
-use internal_types::{
+use crate::internal_types::{
     AddAndRetract,
     AEVTrie,
     KnownEntidOr,
@@ -113,23 +113,23 @@ use edn::entities::{
     OpType,
     TempId,
 };
-use metadata;
+use crate::metadata;
 use rusqlite;
-use schema::{
+use crate::schema::{
     SchemaBuilding,
 };
-use tx_checking;
-use types::{
+use crate::tx_checking;
+use crate::types::{
     AVMap,
     AVPair,
     PartitionMap,
     TransactableValue,
 };
-use upsert_resolution::{
+use crate::upsert_resolution::{
     FinalPopulations,
     Generation,
 };
-use watcher::{
+use crate::watcher::{
     TransactWatcher,
 };
 
@@ -774,7 +774,7 @@ impl<'conn, 'a, W> Tx<'conn, 'a, W> where W: TransactWatcher {
                 tx_might_update_metadata = true;
             }
 
-            let mut queue = match (attribute.fulltext, attribute.multival) {
+            let queue = match (attribute.fulltext, attribute.multival) {
                 (false, true) => &mut non_fts_many,
                 (false, false) => &mut non_fts_one,
                 (true, false) => &mut fts_one,
