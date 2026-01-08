@@ -212,7 +212,7 @@ dependencies = [
  "edn",
  "enum-set",
  "indexmap",
- "lazy_static 0.2.11",
+ "lazy_static 1.5.0",
  "ordered-float",
  "serde",
  "serde_derive",
