@@ -23,7 +23,7 @@ use query_pull_traits::errors::{
     PullError,
 };
 
-use aggregates::{
+use crate::aggregates::{
     SimpleAggregationOp,
 };
 

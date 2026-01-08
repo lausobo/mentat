@@ -8,7 +8,6 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#[macro_use]
 extern crate rusqlite;
 
 #[macro_use]
@@ -23,4 +22,3 @@ extern crate mentat_query_sql;
 
 pub mod errors;
 pub mod aggregates;
-
