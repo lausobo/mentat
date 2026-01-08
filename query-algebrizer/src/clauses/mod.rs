@@ -57,7 +57,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     ColumnConstraint,
     ColumnIntersection,
     ComputedTable,
@@ -89,14 +89,14 @@ mod fulltext;
 mod tx_log_api;
 mod where_fn;
 
-use validate::{
+use crate::validate::{
     validate_not_join,
     validate_or_join,
 };
 
 pub use self::inputs::QueryInputs;
 
-use Known;
+use crate::Known;
 
 trait Contains<K, T> {
     fn when_contains<F: FnOnce() -> T>(&self, k: &K, f: F) -> Option<T>;

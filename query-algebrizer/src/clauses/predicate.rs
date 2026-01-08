@@ -24,23 +24,23 @@ use edn::query::{
     TypeAnnotation,
 };
 
-use clauses::ConjoiningClauses;
+use crate::clauses::ConjoiningClauses;
 
-use clauses::convert::ValueTypes;
+use crate::clauses::convert::ValueTypes;
 
 use query_algebrizer_traits::errors::{
     AlgebrizerError,
     Result,
 };
 
-use types::{
+use crate::types::{
     ColumnConstraint,
     EmptyBecause,
     Inequality,
     QueryValue,
 };
 
-use Known;
+use crate::Known;
 
 /// Application of predicates.
 impl ConjoiningClauses {
@@ -209,13 +209,13 @@ mod testing {
         Variable,
     };
 
-    use clauses::{
+    use crate::clauses::{
         add_attribute,
         associate_ident,
         ident,
     };
 
-    use types::{
+    use crate::types::{
         ColumnConstraint,
         EmptyBecause,
         QueryValue,

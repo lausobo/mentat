@@ -70,7 +70,7 @@ pub use types::{
 #[derive(Clone, Copy)]
 pub struct Known<'s, 'c> {
     pub schema: &'s Schema,
-    pub cache: Option<&'c CachedAttributes>,
+    pub cache: Option<&'c dyn CachedAttributes>,
 }
 
 impl<'s, 'c> Known<'s, 'c> {
@@ -81,7 +81,7 @@ impl<'s, 'c> Known<'s, 'c> {
         }
     }
 
-    pub fn new(s: &'s Schema, c: Option<&'c CachedAttributes>) -> Known<'s, 'c> {
+    pub fn new(s: &'s Schema, c: Option<&'c dyn CachedAttributes>) -> Known<'s, 'c> {
         Known {
             schema: s,
             cache: c,
@@ -127,9 +127,9 @@ impl<'s, 'c> Known<'s, 'c> {
 
 #[derive(Debug)]
 pub struct AlgebraicQuery {
-    default_source: SrcVar,
+    pub default_source: SrcVar,
     pub find_spec: Rc<FindSpec>,
-    has_aggregates: bool,
+    pub has_aggregates: bool,
 
     /// The set of variables that the caller wishes to be used for grouping when aggregating.
     /// These are specified in the query input, as `:with`, and are then chewed up during projection.
