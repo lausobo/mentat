@@ -27,10 +27,10 @@ use combine::char::{
 
 use combine::combinator::{
     choice,
-    try,
+    r#try as try_,
 };
 
-use CliError;
+use crate::CliError;
 
 use edn;
 
@@ -189,7 +189,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
 
     let edn_arg_parser = || spaces()
                             .with(look_ahead(string("[").or(string("{")))
-                                .with(many1::<Vec<_>, _>(try(any())))
+                                .with(many1::<Vec<_>, _>(try_(any())))
                                 .map(|args| args.iter().collect())
                             );
 
@@ -230,7 +230,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
                         Ok(Command::Close)
                     });
 
-    let exit_parser = try(string(COMMAND_EXIT_LONG)).or(try(string(COMMAND_EXIT_SHORT)))
+    let exit_parser = try_(string(COMMAND_EXIT_LONG)).or(try_(string(COMMAND_EXIT_SHORT)))
                     .with(no_arg_parser())
                     .map(|args| {
                         if !args.is_empty() {
@@ -239,8 +239,8 @@ pub fn command(s: &str) -> Result<Command, Error> {
                         Ok(Command::Exit)
                     });
 
-    let explain_query_parser = try(string(COMMAND_QUERY_EXPLAIN_LONG))
-                           .or(try(string(COMMAND_QUERY_EXPLAIN_SHORT)))
+    let explain_query_parser = try_(string(COMMAND_QUERY_EXPLAIN_LONG))
+                           .or(try_(string(COMMAND_QUERY_EXPLAIN_SHORT)))
                         .with(edn_arg_parser())
                         .map(|x| {
                             Ok(Command::QueryExplain(x))
@@ -253,7 +253,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
                         Ok(Command::Help(args.clone()))
                     });
 
-    let import_parser = try(string(COMMAND_IMPORT_LONG)).or(try(string(COMMAND_IMPORT_SHORT)))
+    let import_parser = try_(string(COMMAND_IMPORT_LONG)).or(try_(string(COMMAND_IMPORT_SHORT)))
                     .with(spaces())
                     .with(path())
                     .map(|x| {
@@ -266,7 +266,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
     let open_encrypted_parser = opener(COMMAND_OPEN_ENCRYPTED, 2).map(|args_res|
         args_res.map(|args| Command::OpenEncrypted(args[0].clone(), args[1].clone())));
 
-    let query_parser = try(string(COMMAND_QUERY_LONG)).or(try(string(COMMAND_QUERY_SHORT)))
+    let query_parser = try_(string(COMMAND_QUERY_LONG)).or(try_(string(COMMAND_QUERY_SHORT)))
                         .with(edn_arg_parser())
                         .map(|x| {
                             Ok(Command::Query(x))
@@ -307,7 +307,7 @@ pub fn command(s: &str) -> Result<Command, Error> {
                         Ok(Command::Timer(args))
                     });
 
-    let transact_parser = try(string(COMMAND_TRANSACT_LONG)).or(try(string(COMMAND_TRANSACT_SHORT)))
+    let transact_parser = try_(string(COMMAND_TRANSACT_LONG)).or(try_(string(COMMAND_TRANSACT_SHORT)))
                     .with(edn_arg_parser())
                     .map(|x| {
                         Ok(Command::Transact(x))
@@ -315,21 +315,21 @@ pub fn command(s: &str) -> Result<Command, Error> {
 
     spaces()
     .skip(token('.'))
-    .with(choice::<[&mut Parser<Input = _, Output = Result<Command, Error>>; 14], _>
-          ([&mut try(help_parser),
-            &mut try(import_parser),
-            &mut try(timer_parser),
-            &mut try(cache_parser),
-            &mut try(open_encrypted_parser),
-            &mut try(open_parser),
-            &mut try(close_parser),
-            &mut try(explain_query_parser),
-            &mut try(exit_parser),
-            &mut try(query_prepared_parser),
-            &mut try(query_parser),
-            &mut try(schema_parser),
-            &mut try(sync_parser),
-            &mut try(transact_parser)]))
+    .with(choice::<[&mut dyn Parser<Input = _, Output = Result<Command, Error>>; 14], _>
+          ([&mut try_(help_parser),
+            &mut try_(import_parser),
+            &mut try_(timer_parser),
+            &mut try_(cache_parser),
+            &mut try_(open_encrypted_parser),
+            &mut try_(open_parser),
+            &mut try_(close_parser),
+            &mut try_(explain_query_parser),
+            &mut try_(exit_parser),
+            &mut try_(query_prepared_parser),
+            &mut try_(query_parser),
+            &mut try_(schema_parser),
+            &mut try_(sync_parser),
+            &mut try_(transact_parser)]))
         .parse(s)
         .unwrap_or((Err(CliError::CommandParse(format!("Invalid command {:?}", s)).into()), "")).0
 }

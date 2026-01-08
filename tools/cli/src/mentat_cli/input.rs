@@ -27,7 +27,7 @@ use termion::{
 
 use self::InputResult::*;
 
-use command_parser::{
+use crate::command_parser::{
     Command,
     command,
 };
@@ -78,7 +78,7 @@ impl InputReader {
     pub fn new(interface: Option<Interface<DefaultTerminal>>) -> InputReader {
         if let Some(ref interface) = interface {
             // It's fine to fail to load history.
-            let p = ::history_file_path();
+            let p = crate::history_file_path();
             let loaded = interface.load_history(&p);
             debug!("history read from {}: {}", p.display(), loaded.is_ok());
 
@@ -106,7 +106,7 @@ impl InputReader {
     pub fn read_input(&mut self) -> Result<InputResult, Error> {
         let prompt = if self.in_process_cmd.is_some() { MORE_PROMPT } else { DEFAULT_PROMPT };
         let prompt = format!("{blue}{prompt}{reset}",
-                             blue = color::Fg(::BLUE),
+                             blue = color::Fg(crate::BLUE),
                              prompt = prompt,
                              reset = color::Fg(color::Reset));
         let line = match self.read_line(prompt.as_str()) {
@@ -187,7 +187,7 @@ impl InputReader {
     fn read_line(&mut self, prompt: &str) -> UserAction {
         match self.interface {
             Some(ref mut r) => {
-                r.set_prompt(prompt);
+                let _ = r.set_prompt(prompt);
                 r.read_line().ok().map_or(UserAction::Quit, |line|
                     match line {
                         ReadResult::Input(s) => UserAction::TextInput(s),
@@ -231,7 +231,7 @@ impl InputReader {
 
     pub fn save_history(&self) -> () {
         if let Some(ref interface) = self.interface {
-            let p = ::history_file_path();
+            let p = crate::history_file_path();
             // It's okay to fail to save history.
             let saved = interface.save_history(&p);
             debug!("history saved to {}: {}", p.display(), saved.is_ok());
