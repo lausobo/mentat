@@ -321,17 +321,17 @@ impl<'a, 'c> InProgress<'a, 'c> {
     }
 
     pub fn savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("SAVEPOINT {}", name), &[])?;
+        self.transaction.execute(&format!("SAVEPOINT {}", name), [])?;
         Ok(())
     }
 
     pub fn rollback_savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("ROLLBACK TO {}", name), &[])?;
+        self.transaction.execute(&format!("ROLLBACK TO {}", name), [])?;
         Ok(())
     }
 
     pub fn release_savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("RELEASE {}", name), &[])?;
+        self.transaction.execute(&format!("RELEASE {}", name), [])?;
         Ok(())
     }
 }
