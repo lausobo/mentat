@@ -929,7 +929,7 @@ impl<T> HasVocabularies for T where T: HasSchema + Queryable {
 
 #[cfg(test)]
 mod tests {
-    use ::{
+    use crate::{
         Store,
     };
 

@@ -280,11 +280,11 @@ mod tests {
         PreparedQuery,
     };
 
-    use ::{
+    use crate::{
         QueryInputs,
     };
 
-    use ::vocabulary::{
+    use crate::vocabulary::{
         AttributeBuilder,
         Definition,
         VersionedStore,
