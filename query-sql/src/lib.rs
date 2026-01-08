@@ -662,14 +662,14 @@ mod tests {
         FulltextColumn,
     };
 
-    fn build_query(c: &QueryFragment) -> SQLQuery {
+    fn build_query(c: &dyn QueryFragment) -> SQLQuery {
         let mut builder = SQLiteQueryBuilder::new();
         c.push_sql(&mut builder)
          .map(|_| builder.finish())
          .expect("to produce a query for the given constraint")
     }
 
-    fn build(c: &QueryFragment) -> String {
+    fn build(c: &dyn QueryFragment) -> String {
         build_query(c).sql
     }
 
