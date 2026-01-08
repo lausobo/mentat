@@ -62,11 +62,9 @@ use query_projector_traits::errors::{
     Result,
 };
 
-use projectors::{
-    Projector,
-};
+use crate::projectors::Projector;
 
-use pull::{
+use crate::pull::{
     PullIndices,
     PullOperation,
     PullTemplate,
@@ -97,7 +95,7 @@ pub(crate) struct ProjectedElements {
 }
 
 impl ProjectedElements {
-    pub(crate) fn combine(self, projector: Box<Projector>, distinct: bool) -> Result<CombinedProjection> {
+    pub(crate) fn combine(self, projector: Box<dyn Projector>, distinct: bool) -> Result<CombinedProjection> {
         Ok(CombinedProjection {
             sql_projection: self.sql_projection,
             pre_aggregate_projection: self.pre_aggregate_projection,

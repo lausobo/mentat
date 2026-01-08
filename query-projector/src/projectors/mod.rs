@@ -22,7 +22,7 @@ use query_projector_traits::errors::{
 
 pub trait Projector {
     fn project<'stmt, 's>(&self, schema: &Schema, sqlite: &'s rusqlite::Connection, rows: Rows<'stmt>) -> Result<QueryOutput>;
-    fn columns<'s>(&'s self) -> Box<Iterator<Item=&Element> + 's>;
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item=&'s Element> + 's>;
 }
 
 mod constant;

@@ -139,7 +139,7 @@ impl From<QueryOutput> for QueryResults {
 }
 
 impl QueryOutput {
-    pub fn empty_factory(spec: &FindSpec) -> Box<Fn() -> QueryResults> {
+    pub fn empty_factory(spec: &FindSpec) -> Box<dyn Fn() -> QueryResults> {
         use self::FindSpec::*;
         match spec {
             &FindScalar(_)   => Box::new(|| QueryResults::Scalar(None)),
@@ -363,19 +363,19 @@ impl TypedIndex {
     ///
     /// This function will return a runtime error if the type tag is unknown, or the value is
     /// otherwise not convertible by the DB layer.
-    fn lookup<'a, 'stmt>(&self, row: &Row<'a, 'stmt>) -> Result<Binding> {
+    fn lookup(&self, row: &Row<'_>) -> Result<Binding> {
         use TypedIndex::*;
 
         match self {
             &Known(value_index, value_type) => {
-                let v: rusqlite::types::Value = row.get(value_index);
+                let v: rusqlite::types::Value = row.get(value_index as usize)?;
                 TypedValue::from_sql_value_pair(v, value_type)
                     .map(|v| v.into())
                     .map_err(|e| e.into())
             },
             &Unknown(value_index, type_index) => {
-                let v: rusqlite::types::Value = row.get(value_index);
-                let value_type_tag: i32 = row.get(type_index);
+                let v: rusqlite::types::Value = row.get(value_index as usize)?;
+                let value_type_tag: i32 = row.get(type_index as usize)?;
                 TypedValue::from_sql_value_pair(v, value_type_tag)
                     .map(|v| v.into())
                     .map_err(|e| e.into())
@@ -405,7 +405,7 @@ pub struct CombinedProjection {
 
     /// A Datalog projection. This consumes rows of the appropriate shape (as defined by
     /// the SQL projection) to yield one of the four kinds of Datalog query result.
-    pub datalog_projector: Box<Projector>,
+    pub datalog_projector: Box<dyn Projector>,
 
     /// True if this query requires the SQL query to include DISTINCT.
     pub distinct: bool,
