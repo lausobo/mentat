@@ -68,6 +68,7 @@
 //! `Result<T, E>` as a `*mut T` while writing any error to the `ExternError` are provided as
 //! `translate_result`, `translate_opt_result` (for `Result<Option<T>>`) and `translate_void_result`
 //! (for `Result<(), T>`). Callers are responsible for freeing the `message` field of `ExternError`.
+#![allow(unsafe_op_in_unsafe_fn, unused_doc_comments, elided_named_lifetimes)]
 
 extern crate core;
 extern crate libc;
@@ -206,7 +207,7 @@ impl<'a, 'c> InProgressTransactResult<'a, 'c> {
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `store_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_open(uri: *const c_char, error: *mut ExternError) -> *mut Store {
     assert_not_null!(uri);
     let uri = c_char_to_string(uri);
@@ -215,7 +216,7 @@ pub unsafe extern "C" fn store_open(uri: *const c_char, error: *mut ExternError)
 
 /// Variant of store_open that opens an encrypted database.
 #[cfg(feature = "sqlcipher")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_open_encrypted(uri: *const c_char, key: *const c_char, error: *mut ExternError) -> *mut Store {
     let uri = c_char_to_string(uri);
     let key = c_char_to_string(key);
@@ -243,7 +244,7 @@ pub unsafe extern "C" fn store_open_encrypted(uri: *const c_char, key: *const c_
 /// pointer type.
 ///
 /// TODO: Document the errors that can result from begin_transaction
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_begin_transaction<'a, 'c>(store: *mut Store, error: *mut ExternError) -> *mut InProgress<'a, 'c> {
     assert_not_null!(store);
     let store = &mut *store;
@@ -262,7 +263,7 @@ pub unsafe extern "C" fn store_begin_transaction<'a, 'c>(store: *mut Store, erro
 /// pointer type.
 ///
 /// TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_transact<'m>(in_progress: *mut InProgress<'m, 'm>, transaction: *const c_char, error: *mut ExternError) -> *mut TxReport {
     assert_not_null!(in_progress);
     let in_progress = &mut *in_progress;
@@ -274,7 +275,7 @@ pub unsafe extern "C" fn in_progress_transact<'m>(in_progress: *mut InProgress<'
 /// in progress transaction.
 ///
 /// TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_commit<'m>(in_progress: *mut InProgress<'m, 'm>, error: *mut ExternError) {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
@@ -285,7 +286,7 @@ pub unsafe extern "C" fn in_progress_commit<'m>(in_progress: *mut InProgress<'m,
 /// in progress transaction.
 ///
 /// TODO: Document the errors that can result from rollback
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_rollback<'m>(in_progress: *mut InProgress<'m, 'm>, error: *mut ExternError) {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
@@ -300,7 +301,7 @@ pub unsafe extern "C" fn in_progress_rollback<'m>(in_progress: *mut InProgress<'
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `in_progress_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder<'m>(in_progress: *mut InProgress<'m, 'm>) -> *mut InProgressBuilder {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
@@ -315,7 +316,7 @@ pub unsafe extern "C" fn in_progress_builder<'m>(in_progress: *mut InProgress<'m
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `entity_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_entity_builder_from_temp_id<'m>(in_progress: *mut InProgress<'m, 'm>, temp_id: *const c_char) -> *mut EntityBuilder<InProgressBuilder> {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
@@ -331,7 +332,7 @@ pub unsafe extern "C" fn in_progress_entity_builder_from_temp_id<'m>(in_progress
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `entity_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_entity_builder_from_entid<'m>(in_progress: *mut InProgress<'m, 'm>, entid: c_longlong) -> *mut EntityBuilder<InProgressBuilder> {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
@@ -346,7 +347,7 @@ pub unsafe extern "C" fn in_progress_entity_builder_from_entid<'m>(in_progress: 
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `in_progress_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_in_progress_builder<'a, 'c>(store: *mut Store, error: *mut ExternError) -> *mut InProgressBuilder<'a, 'c> {
     assert_not_null!(store);
     let store = &mut *store;
@@ -364,7 +365,7 @@ pub unsafe extern "C" fn store_in_progress_builder<'a, 'c>(store: *mut Store, er
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `entity_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_entity_builder_from_temp_id<'a, 'c>(store: *mut Store, temp_id: *const c_char, error: *mut ExternError) -> *mut EntityBuilder<InProgressBuilder<'a, 'c>> {
     assert_not_null!(store);
     let store = &mut *store;
@@ -383,7 +384,7 @@ pub unsafe extern "C" fn store_entity_builder_from_temp_id<'a, 'c>(store: *mut S
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `entity_builder_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_entity_builder_from_entid<'a, 'c>(store: *mut Store, entid: c_longlong, error: *mut ExternError) -> *mut EntityBuilder<InProgressBuilder<'a, 'c>> {
     assert_not_null!(store);
     let store = &mut *store;
@@ -402,7 +403,7 @@ pub unsafe extern "C" fn store_entity_builder_from_entid<'a, 'c>(store: *mut Sto
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/string`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_string<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -425,7 +426,7 @@ pub unsafe extern "C" fn in_progress_builder_add_string<'a, 'c>(
 /// If `kw` is not a valid attribute in the store.
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/long`.
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_long<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -449,7 +450,7 @@ pub unsafe extern "C" fn in_progress_builder_add_long<'a, 'c>(
 /// If `value` is not present as an Entid in the store.
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/ref`.
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_ref<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -474,7 +475,7 @@ pub unsafe extern "C" fn in_progress_builder_add_ref<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/keyword`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_keyword<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -498,7 +499,7 @@ pub unsafe extern "C" fn in_progress_builder_add_keyword<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/boolean`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_boolean<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -522,7 +523,7 @@ pub unsafe extern "C" fn in_progress_builder_add_boolean<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/double`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_double<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -546,7 +547,7 @@ pub unsafe extern "C" fn in_progress_builder_add_double<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/instant`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_timestamp<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -570,7 +571,7 @@ pub unsafe extern "C" fn in_progress_builder_add_timestamp<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/uuid`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_add_uuid<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -596,7 +597,7 @@ pub unsafe extern "C" fn in_progress_builder_add_uuid<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/string`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_string<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -620,7 +621,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_string<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/long`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_long<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -644,7 +645,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_long<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/ref`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_ref<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -669,7 +670,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_ref<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/keyword`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_keyword<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -693,7 +694,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_keyword<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/boolean`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_boolean<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -717,7 +718,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_boolean<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/double`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_double<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -741,7 +742,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_double<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/instant`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_timestamp<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -767,7 +768,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_timestamp<'a, 'c>(
 // TODO don't panic if the UUID is not valid - return result instead.
 //
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_retract_uuid<'a, 'c>(
     builder: *mut InProgressBuilder<'a, 'c>,
     entid: c_longlong,
@@ -790,7 +791,7 @@ pub unsafe extern "C" fn in_progress_builder_retract_uuid<'a, 'c>(
 /// This consumes the builder and the enclosed [InProgress](mentat::InProgress) transaction.
 ///
 // TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_commit<'a, 'c>(builder: *mut InProgressBuilder<'a, 'c>, error: *mut ExternError) -> *mut TxReport {
     assert_not_null!(builder);
     let builder = Box::from_raw(builder);
@@ -811,7 +812,7 @@ pub unsafe extern "C" fn in_progress_builder_commit<'a, 'c>(builder: *mut InProg
 /// releasing the memory for these pointer types.
 ///
 // TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder_transact<'a, 'c>(builder: *mut InProgressBuilder<'a, 'c>) -> InProgressTransactResult<'a, 'c> {
     assert_not_null!(builder);
     let builder = Box::from_raw(builder);
@@ -827,7 +828,7 @@ pub unsafe extern "C" fn in_progress_builder_transact<'a, 'c>(builder: *mut InPr
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/string`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_string<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -850,7 +851,7 @@ pub unsafe extern "C" fn entity_builder_add_string<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/long`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_long<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -873,7 +874,7 @@ pub unsafe extern "C" fn entity_builder_add_long<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/ref`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_ref<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -896,7 +897,7 @@ pub unsafe extern "C" fn entity_builder_add_ref<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/keyword`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_keyword<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -919,7 +920,7 @@ pub unsafe extern "C" fn entity_builder_add_keyword<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/boolean`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_boolean<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -942,7 +943,7 @@ pub unsafe extern "C" fn entity_builder_add_boolean<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/double`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_double<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -965,7 +966,7 @@ pub unsafe extern "C" fn entity_builder_add_double<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/instant`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_timestamp<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -988,7 +989,7 @@ pub unsafe extern "C" fn entity_builder_add_timestamp<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/uuid`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_add_uuid<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1013,7 +1014,7 @@ pub unsafe extern "C" fn entity_builder_add_uuid<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/string`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_string<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1036,7 +1037,7 @@ pub unsafe extern "C" fn entity_builder_retract_string<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/long`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_long<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1059,7 +1060,7 @@ pub unsafe extern "C" fn entity_builder_retract_long<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/ref`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_ref<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1082,7 +1083,7 @@ pub unsafe extern "C" fn entity_builder_retract_ref<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/keyword`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_keyword<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1105,7 +1106,7 @@ pub unsafe extern "C" fn entity_builder_retract_keyword<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/boolean`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_boolean<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1128,7 +1129,7 @@ pub unsafe extern "C" fn entity_builder_retract_boolean<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/double`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_double<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1151,7 +1152,7 @@ pub unsafe extern "C" fn entity_builder_retract_double<'a, 'c>(
 /// If the `:db/type` of the attribute described by `kw` is not `:db.type/instant`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_timestamp<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1175,7 +1176,7 @@ pub unsafe extern "C" fn entity_builder_retract_timestamp<'a, 'c>(
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
 // TODO don't panic if the UUID is not valid - return result instead.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_retract_uuid<'a, 'c>(
     builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>,
     kw: *const c_char,
@@ -1205,7 +1206,7 @@ pub unsafe extern "C" fn entity_builder_retract_uuid<'a, 'c>(
 /// releasing the memory for these pointer types.
 ///
 /// TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_transact<'a, 'c>(builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>) -> InProgressTransactResult<'a, 'c> {
     assert_not_null!(builder);
     let builder = Box::from_raw(builder);
@@ -1218,7 +1219,7 @@ pub unsafe extern "C" fn entity_builder_transact<'a, 'c>(builder: *mut EntityBui
 /// This consumes the builder and the enclosed [InProgress](mentat::InProgress) transaction.
 ///
 /// TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn entity_builder_commit<'a, 'c>(builder: *mut EntityBuilder<InProgressBuilder<'a, 'c>>, error: *mut ExternError) -> *mut TxReport {
     assert_not_null!(builder);
     let builder = Box::from_raw(builder);
@@ -1228,7 +1229,7 @@ pub unsafe extern "C" fn entity_builder_commit<'a, 'c>(builder: *mut EntityBuild
 /// Performs a single transaction against the store.
 ///
 /// TODO: Document the errors that can result from transact
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_transact(store: *mut Store, transaction: *const c_char, error: *mut ExternError) -> *mut TxReport {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1243,7 +1244,7 @@ pub unsafe extern "C" fn store_transact(store: *mut Store, transaction: *const c
 }
 
 /// Fetches the `tx_id` for the given [TxReport](mentat::TxReport)`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tx_report_get_entid(tx_report: *mut TxReport) -> c_longlong {
     assert_not_null!(tx_report);
     let tx_report = &*tx_report;
@@ -1251,7 +1252,7 @@ pub unsafe extern "C" fn tx_report_get_entid(tx_report: *mut TxReport) -> c_long
 }
 
 /// Fetches the `tx_instant` for the given [TxReport](mentat::TxReport).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tx_report_get_tx_instant(tx_report: *mut TxReport) -> c_longlong {
     assert_not_null!(tx_report);
     let tx_report = &*tx_report;
@@ -1264,7 +1265,7 @@ pub unsafe extern "C" fn tx_report_get_tx_instant(tx_report: *mut TxReport) -> c
 /// Note that this reutrns the value as a heap allocated pointer that the caller is responsible for
 /// freeing with `destroy()`.
 // TODO: This is gross and unnecessary
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tx_report_entity_for_temp_id(tx_report: *mut TxReport, tempid: *const c_char) -> *mut c_longlong {
     assert_not_null!(tx_report);
     let tx_report = &*tx_report;
@@ -1279,7 +1280,7 @@ pub unsafe extern "C" fn tx_report_entity_for_temp_id(tx_report: *mut TxReport, 
 /// Adds an attribute to the cache.
 /// `store_cache_attribute_forward` caches values for an attribute keyed by entity
 /// (i.e. find values and entities that have this attribute, or find values of attribute for an entity)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_cache_attribute_forward(store: *mut Store, attribute: *const c_char, error: *mut ExternError) {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1290,7 +1291,7 @@ pub unsafe extern "C" fn store_cache_attribute_forward(store: *mut Store, attrib
 /// Adds an attribute to the cache.
 /// `store_cache_attribute_reverse` caches entities for an attribute keyed by value.
 /// (i.e. find entities that have a particular value for an attribute).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_cache_attribute_reverse(store: *mut Store, attribute: *const c_char, error: *mut ExternError) {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1306,7 +1307,7 @@ pub unsafe extern "C" fn store_cache_attribute_reverse(store: *mut Store, attrib
 ///
 /// `Reverse` caches entities for an attribute keyed by value.
 /// (i.e. find entities that have a particular value for an attribute).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_cache_attribute_bi_directional(store: *mut Store, attribute: *const c_char, error: *mut ExternError) {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1323,7 +1324,7 @@ pub unsafe extern "C" fn store_cache_attribute_bi_directional(store: *mut Store,
 /// pointer type.
 ///
 /// TODO: Update QueryBuilder so it only takes a [Store](mentat::Store)  pointer on execution
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_query<'a>(store: *mut Store, query: *const c_char) -> *mut QueryBuilder<'a> {
     assert_not_null!(store);
     let query = c_char_to_string(query);
@@ -1334,7 +1335,7 @@ pub unsafe extern "C" fn store_query<'a>(store: *mut Store, query: *const c_char
 /// Binds a [TypedValue::Long](mentat::TypedValue::Long) to a [Variable](mentat::Variable) with the given name.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_long(query_builder: *mut QueryBuilder, var: *const c_char, value: c_longlong) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1345,7 +1346,7 @@ pub unsafe extern "C" fn query_builder_bind_long(query_builder: *mut QueryBuilde
 /// Binds a [TypedValue::Ref](mentat::TypedValue::Ref) to a [Variable](mentat::Variable) with the given name.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_ref(query_builder: *mut QueryBuilder, var: *const c_char, value: c_longlong) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1361,14 +1362,14 @@ pub unsafe extern "C" fn query_builder_bind_ref(query_builder: *mut QueryBuilder
 /// If the provided keyword does not map to a valid keyword in the schema.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_ref_kw(query_builder: *mut QueryBuilder, var: *const c_char, value: *const c_char) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
     let kw = kw_from_string(c_char_to_string(value));
     let query_builder = &mut *query_builder;
     if let Some(err) = query_builder.bind_ref_from_kw(&var, kw).err() {
-        panic!(err);
+        panic!("{}", err);
     }
 }
 
@@ -1376,7 +1377,7 @@ pub unsafe extern "C" fn query_builder_bind_ref_kw(query_builder: *mut QueryBuil
 /// `:namespace/name` and converts it into an [NamespacedKeyworf](mentat::NamespacedKeyword).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_kw(query_builder: *mut QueryBuilder, var: *const c_char, value: *const c_char) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1388,7 +1389,7 @@ pub unsafe extern "C" fn query_builder_bind_kw(query_builder: *mut QueryBuilder,
 /// Binds a [TypedValue::Boolean](mentat::TypedValue::Boolean) to a [Variable](mentat::Variable) with the given name.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_boolean(query_builder: *mut QueryBuilder, var: *const c_char, value: bool) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1399,7 +1400,7 @@ pub unsafe extern "C" fn query_builder_bind_boolean(query_builder: *mut QueryBui
 /// Binds a [TypedValue::Double](mentat::TypedValue::Double) to a [Variable](mentat::Variable) with the given name.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_double(query_builder: *mut QueryBuilder, var: *const c_char, value: f64) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1411,7 +1412,7 @@ pub unsafe extern "C" fn query_builder_bind_double(query_builder: *mut QueryBuil
 /// Takes a timestamp in microseconds.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_timestamp(query_builder: *mut QueryBuilder, var: *const c_char, value: c_longlong) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1422,7 +1423,7 @@ pub unsafe extern "C" fn query_builder_bind_timestamp(query_builder: *mut QueryB
 /// Binds a [TypedValue::String](mentat::TypedValue::String) to a [Variable](mentat::Variable) with the given name.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_string(query_builder: *mut QueryBuilder, var: *const c_char, value: *const c_char) {
     assert_not_null!(query_builder);
     let var = c_char_to_string(var);
@@ -1435,7 +1436,7 @@ pub unsafe extern "C" fn query_builder_bind_string(query_builder: *mut QueryBuil
 /// Takes a `UUID` as a byte slice of length 16. This maps directly to the `uuid_t` C type.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_bind_uuid(query_builder: *mut QueryBuilder, var: *const c_char, value: *const [u8; 16]) {
     assert_not_null!(query_builder, value);
     let var = c_char_to_string(var);
@@ -1456,7 +1457,7 @@ pub unsafe extern "C" fn query_builder_bind_uuid(query_builder: *mut QueryBuilde
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_execute_scalar(query_builder: *mut QueryBuilder, error: *mut ExternError) -> *mut Binding {
     assert_not_null!(query_builder);
     let query_builder = &mut *query_builder;
@@ -1475,7 +1476,7 @@ pub unsafe extern "C" fn query_builder_execute_scalar(query_builder: *mut QueryB
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_list_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_execute_coll(query_builder: *mut QueryBuilder, error: *mut ExternError) -> *mut Vec<Binding> {
     assert_not_null!(query_builder);
     let query_builder = &mut *query_builder;
@@ -1494,7 +1495,7 @@ pub unsafe extern "C" fn query_builder_execute_coll(query_builder: *mut QueryBui
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_list_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_execute_tuple(query_builder: *mut QueryBuilder, error: *mut ExternError) -> *mut Vec<Binding> {
     assert_not_null!(query_builder);
     let query_builder = &mut *query_builder;
@@ -1513,7 +1514,7 @@ pub unsafe extern "C" fn query_builder_execute_tuple(query_builder: *mut QueryBu
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_result_set_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn query_builder_execute(query_builder: *mut QueryBuilder, error: *mut ExternError) -> *mut RelResult<Binding> {
     assert_not_null!(query_builder);
     let query_builder = &mut *query_builder;
@@ -1535,7 +1536,7 @@ fn unwrap_conversion<T>(value: Option<T>, expected_type: ValueType) -> T {
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::Long).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_long(typed_value: *mut Binding) -> c_longlong {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1551,7 +1552,7 @@ pub unsafe extern "C" fn typed_value_into_long(typed_value: *mut Binding) -> c_l
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Ref](mentat::ValueType::Ref).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_entid(typed_value: *mut Binding) -> Entid {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1566,7 +1567,7 @@ pub unsafe extern "C" fn typed_value_into_entid(typed_value: *mut Binding) -> En
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Ref](mentat::ValueType::Ref).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_kw(typed_value: *mut Binding) -> *mut c_char {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1582,7 +1583,7 @@ pub unsafe extern "C" fn typed_value_into_kw(typed_value: *mut Binding) -> *mut 
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::Boolean).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_boolean(typed_value: *mut Binding) -> i32 {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1596,7 +1597,7 @@ pub unsafe extern "C" fn typed_value_into_boolean(typed_value: *mut Binding) -> 
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::Double).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_double(typed_value: *mut Binding) -> f64 {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1610,7 +1611,7 @@ pub unsafe extern "C" fn typed_value_into_double(typed_value: *mut Binding) -> f
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::Instant).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_timestamp(typed_value: *mut Binding) -> c_longlong {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1627,7 +1628,7 @@ pub unsafe extern "C" fn typed_value_into_timestamp(typed_value: *mut Binding) -
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::String).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_string(typed_value: *mut Binding) -> *mut c_char {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1643,7 +1644,7 @@ pub unsafe extern "C" fn typed_value_into_string(typed_value: *mut Binding) -> *
 /// If the [ValueType](mentat::ValueType) of the [Binding](mentat::Binding) is not [ValueType::Long](mentat::ValueType::Uuid).
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_into_uuid(typed_value: *mut Binding) -> *mut [u8; 16] {
     assert_not_null!(typed_value);
     let typed_value = Box::from_raw(typed_value);
@@ -1652,7 +1653,7 @@ pub unsafe extern "C" fn typed_value_into_uuid(typed_value: *mut Binding) -> *mu
 }
 
 /// Returns the [ValueType](mentat::ValueType) of this [Binding](mentat::Binding).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_value_type(typed_value: *mut Binding) -> ValueType {
     let typed_value = &*typed_value;
     typed_value.value_type().unwrap_or_else(|| panic!("Binding is not Scalar and has no ValueType"))
@@ -1666,7 +1667,7 @@ pub unsafe extern "C" fn typed_value_value_type(typed_value: *mut Binding) -> Va
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_result_set_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn row_at_index(rows: *mut RelResult<Binding>, index: c_int) -> *mut Vec<Binding> {
     assert_not_null!(rows);
     let result = &*rows;
@@ -1680,7 +1681,7 @@ pub unsafe extern "C" fn row_at_index(rows: *mut RelResult<Binding>, index: c_in
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_result_set_iter_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_result_set_into_iter(rows: *mut RelResult<Binding>) -> *mut BindingListIterator {
     assert_not_null!(rows);
     let result = &*rows;
@@ -1696,7 +1697,7 @@ pub unsafe extern "C" fn typed_value_result_set_into_iter(rows: *mut RelResult<B
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_list_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_result_set_iter_next(iter: *mut BindingListIterator) -> *mut Vec<Binding> {
     assert_not_null!(iter);
     let iter = &mut *iter;
@@ -1710,7 +1711,7 @@ pub unsafe extern "C" fn typed_value_result_set_iter_next(iter: *mut BindingList
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_list_iter_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_list_into_iter(values: *mut Vec<Binding>) -> *mut BindingIterator {
     assert_not_null!(values);
     let result = Box::from_raw(values);
@@ -1725,7 +1726,7 @@ pub unsafe extern "C" fn typed_value_list_into_iter(values: *mut Vec<Binding>) -
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn typed_value_list_iter_next(iter: *mut BindingIterator) -> *mut Binding {
     assert_not_null!(iter);
     let iter = &mut *iter;
@@ -1740,7 +1741,7 @@ pub unsafe extern "C" fn typed_value_list_iter_next(iter: *mut BindingIterator) 
 /// Callers are responsible for managing the memory for the return value.
 /// A destructor `typed_value_destroy` is provided for releasing the memory for this
 /// pointer type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index(values: *mut Vec<Binding>, index: c_int) -> *mut Binding {
     assert_not_null!(values);
     let values = &*values;
@@ -1762,7 +1763,7 @@ pub unsafe extern "C" fn value_at_index(values: *mut Vec<Binding>, index: c_int)
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_long(values: *mut Vec<Binding>, index: c_int) -> c_longlong {
     assert_not_null!(values);
     let result = &*values;
@@ -1778,7 +1779,7 @@ pub unsafe extern "C" fn value_at_index_into_long(values: *mut Vec<Binding>, ind
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_entid(values: *mut Vec<Binding>, index: c_int) -> Entid {
     assert_not_null!(values);
     let result = &*values;
@@ -1794,7 +1795,7 @@ pub unsafe extern "C" fn value_at_index_into_entid(values: *mut Vec<Binding>, in
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_kw(values: *mut Vec<Binding>, index: c_int) -> *mut c_char {
     assert_not_null!(values);
     let result = &*values;
@@ -1812,7 +1813,7 @@ pub unsafe extern "C" fn value_at_index_into_kw(values: *mut Vec<Binding>, index
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_boolean(values: *mut Vec<Binding>, index: c_int) -> i32 {
     assert_not_null!(values);
     let result = &*values;
@@ -1828,7 +1829,7 @@ pub unsafe extern "C" fn value_at_index_into_boolean(values: *mut Vec<Binding>, 
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_double(values: *mut Vec<Binding>, index: c_int) -> f64 {
     assert_not_null!(values);
     let result = &*values;
@@ -1844,7 +1845,7 @@ pub unsafe extern "C" fn value_at_index_into_double(values: *mut Vec<Binding>, i
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_timestamp(values: *mut Vec<Binding>, index: c_int) -> c_longlong {
     assert_not_null!(values);
     let result = &*values;
@@ -1860,7 +1861,7 @@ pub unsafe extern "C" fn value_at_index_into_timestamp(values: *mut Vec<Binding>
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_string(values: *mut Vec<Binding>, index: c_int) -> *mut c_char {
     assert_not_null!(values);
     let result = &*values;
@@ -1876,7 +1877,7 @@ pub unsafe extern "C" fn value_at_index_into_string(values: *mut Vec<Binding>, i
 /// If there is no value at `index`.
 ///
 // TODO Generalise with macro https://github.com/mozilla/mentat/issues/703
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn value_at_index_into_uuid(values: *mut Vec<Binding>, index: c_int) -> *mut [u8; 16] {
     assert_not_null!(values);
     let result = &*values;
@@ -1900,7 +1901,7 @@ pub unsafe extern "C" fn value_at_index_into_uuid(values: *mut Vec<Binding>, ind
 /// pointer type.
 ///
 /// TODO: list the types of error that can be caused by this function
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_value_for_attribute(store: *mut Store, entid: c_longlong, attribute: *const c_char, error: *mut ExternError) -> *mut Binding {
     assert_not_null!(store);
     let store = &*store;
@@ -1917,12 +1918,12 @@ pub unsafe extern "C" fn store_value_for_attribute(store: *mut Store, entid: c_l
 ///
 /// If there is no [Attribute](mentat::Attribute)  in the [Schema](mentat::Schema)  for a given `attribute`.
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_register_observer(store: *mut Store,
                                                    key: *const c_char,
                                             attributes: *const Entid,
                                         attributes_len: usize,
-                                              callback: extern fn(key: *const c_char, reports: &TxChangeList)) {
+                            callback: extern "C" fn(key: *const c_char, reports: &TxChangeList)) {
     assert_not_null!(store, attributes);
     let store = &mut *store;
     let mut attribute_set = BTreeSet::new();
@@ -1953,7 +1954,7 @@ pub unsafe extern "C" fn store_register_observer(store: *mut Store,
 }
 
 /// Unregisters a [TxObserver](mentat::TxObserver)  with the `key` to observe changes on this `store`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_unregister_observer(store: *mut Store, key: *const c_char) {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1966,7 +1967,7 @@ pub unsafe extern "C" fn store_unregister_observer(store: *mut Store, key: *cons
 /// # Panics
 ///
 /// If there is no [Attribute](mentat::Attribute)  in the [Schema](mentat::Schema)  for `attr`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn store_entid_for_attribute(store: *mut Store, attr: *const c_char) -> Entid {
     assert_not_null!(store);
     let store = &mut *store;
@@ -1983,7 +1984,7 @@ pub unsafe extern "C" fn store_entid_for_attribute(store: *mut Store, attr: *con
 ///
 /// If there is no value present at the `index`.
 ///
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn tx_change_list_entry_at(tx_report_list: *mut TxChangeList, index: c_int) -> *const TransactionChange {
     assert_not_null!(tx_report_list);
     let tx_report_list = &*tx_report_list;
@@ -1996,7 +1997,7 @@ pub unsafe extern "C" fn tx_change_list_entry_at(tx_report_list: *mut TxChangeLi
 /// # Panics
 ///
 /// If there is no value present at the `index`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn changelist_entry_at(tx_report: *mut TransactionChange, index: c_int) -> Entid {
     assert_not_null!(tx_report);
     let tx_report = &*tx_report;
@@ -2004,7 +2005,7 @@ pub unsafe extern "C" fn changelist_entry_at(tx_report: *mut TransactionChange, 
     std::ptr::read(tx_report.changes.offset(index as isize))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_c_string_destroy(s: *mut c_char) {
     if !s.is_null() {
         let _ = CString::from_raw(s);
@@ -2014,7 +2015,7 @@ pub unsafe extern "C" fn rust_c_string_destroy(s: *mut c_char) {
 /// Creates a function with a given `$name` that releases the memory for a type `$t`.
 macro_rules! define_destructor (
     ($name:ident, $t:ty) => (
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $name(obj: *mut $t) {
             if !obj.is_null() {
                 let _ = Box::from_raw(obj);
@@ -2032,7 +2033,7 @@ macro_rules! define_destructor (
 /// https://github.com/mozilla/mentat/issues/702
 macro_rules! define_destructor_with_lifetimes (
     ($name:ident, $t:ty) => (
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn $name<'a, 'c>(obj: *mut $t) {
             if !obj.is_null() {
                 let _ = Box::from_raw(obj);
