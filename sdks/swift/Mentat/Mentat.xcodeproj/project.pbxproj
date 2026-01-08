@@ -77,7 +77,6 @@
 		7BDB96AC2077C38E009D0651 /* TupleResult.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TupleResult.swift; sourceTree = "<group>"; };
 		7BDB96AE2077C38E009D0651 /* TypedValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TypedValue.swift; sourceTree = "<group>"; };
 		7BDB96C12077CD98009D0651 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
-		7BDB96C32077D090009D0651 /* module.map */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.map; sourceTree = "<group>"; };
 		7BDB96C52077D346009D0651 /* Date+Int64.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Date+Int64.swift"; sourceTree = "<group>"; };
 		7BDB96C8207B735A009D0651 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fixtures; path = ../../../../fixtures; sourceTree = "<group>"; };
 		7BDB96CB207B7684009D0651 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
@@ -141,7 +140,6 @@
 				7BEB7D26207BE5BB000369AD /* Transact */,
 				7BDB968D2077C299009D0651 /* Mentat.h */,
 				7BDB968E2077C299009D0651 /* Info.plist */,
-				7BDB96C32077D090009D0651 /* module.map */,
 			);
 			path = Mentat;
 			sourceTree = "<group>";
