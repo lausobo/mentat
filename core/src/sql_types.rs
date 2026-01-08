@@ -131,9 +131,7 @@ mod tests {
     use core_traits::{
         ValueType,
     };
-    use sql_types::{
-        SQLValueType,
-    };
+    use crate::sql_types::SQLValueType;
 
     #[test]
     fn test_accommodates_integer() {
