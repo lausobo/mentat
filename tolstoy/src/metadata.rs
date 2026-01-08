@@ -212,11 +212,26 @@ mod tests {
 
         // last attribute is the timeline (0).
 
-        db_tx.execute("INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)", &[&268435457, &3, &1529971773701734_i64, &268435457, &1, &4, &0]).expect("inserted");
-        db_tx.execute("INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)", &[&65536, &1, &":person/name", &268435457, &1, &13, &0]).expect("inserted");
-        db_tx.execute("INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)", &[&65536, &7, &27, &268435457, &1, &0, &0]).expect("inserted");
-        db_tx.execute("INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)", &[&65536, &9, &36, &268435457, &1, &0, &0]).expect("inserted");
-        db_tx.execute("INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)", &[&65536, &11, &1, &268435457, &1, &1, &0]).expect("inserted");
+        db_tx.execute(
+            "INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![268435457_i64, 3_i64, 1529971773701734_i64, 268435457_i64, 1_i64, 4_i64, 0_i64],
+        ).expect("inserted");
+        db_tx.execute(
+            "INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![65536_i64, 1_i64, ":person/name", 268435457_i64, 1_i64, 13_i64, 0_i64],
+        ).expect("inserted");
+        db_tx.execute(
+            "INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![65536_i64, 7_i64, 27_i64, 268435457_i64, 1_i64, 0_i64, 0_i64],
+        ).expect("inserted");
+        db_tx.execute(
+            "INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![65536_i64, 9_i64, 36_i64, 268435457_i64, 1_i64, 0_i64, 0_i64],
+        ).expect("inserted");
+        db_tx.execute(
+            "INSERT INTO timelined_transactions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![65536_i64, 11_i64, 1_i64, 268435457_i64, 1_i64, 1_i64, 0_i64],
+        ).expect("inserted");
 
         let (root_tx, last_tx) = SyncMetadata::root_and_head_tx(&db_tx).expect("last tx");
         assert_eq!(268435456, root_tx);

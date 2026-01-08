@@ -74,7 +74,7 @@ mod tests {
         TestConn,
     };
 
-    use debug::txs_after;
+    use crate::debug::txs_after;
 
     #[test]
     fn test_bootstrap_version() {

@@ -130,7 +130,7 @@ pub mod tests {
         let test_uuid = Uuid::new_v4();
         {
             let uuid_bytes = test_uuid.as_bytes().to_vec();
-            let params: [&dyn rusqlite::types::ToSql; 2] = [&uuid_bytes, REMOTE_HEAD_KEY];
+            let params: [&dyn rusqlite::types::ToSql; 2] = [&uuid_bytes, &REMOTE_HEAD_KEY];
             match tx.execute("UPDATE tolstoy_metadata SET value = ? WHERE key = ?", params) {
                 Err(e) => panic!("Error running an update: {}", e),
                 _ => ()
@@ -138,7 +138,10 @@ pub mod tests {
         }
 
         let new_idx = USER0 + 1;
-        match tx.execute("UPDATE tolstoy_parts SET idx = ? WHERE part = ?", &[&new_idx, &PARTITION_USER]) {
+        match tx.execute(
+            "UPDATE tolstoy_parts SET idx = ? WHERE part = ?",
+            rusqlite::params![new_idx, PARTITION_USER],
+        ) {
             Err(e) => panic!("Error running an update: {}", e),
             _ => ()
         }
@@ -148,8 +151,8 @@ pub mod tests {
         // Check that running ensure_current_version on an initialized conn doesn't change anything.
         let mut stmt = tx.prepare("SELECT value FROM tolstoy_metadata").unwrap();
         let mut values_iter = stmt.query_map([], |r| {
-            let raw_uuid: Vec<u8> = r.get(0);
-            Uuid::from_bytes(raw_uuid.as_slice()).unwrap()
+            let raw_uuid: Vec<u8> = r.get(0)?;
+            Ok(Uuid::from_bytes(raw_uuid.as_slice()).unwrap())
         }).expect("query works");
 
         let first: Result<Uuid> = values_iter.next().unwrap().map_err(|e| e.into());
