@@ -136,9 +136,7 @@ pub enum AttributeBitFlags {
 }
 
 pub mod attribute {
-    use ::{
-        TypedValue,
-    };
+    use crate::TypedValue;
 
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
     pub enum Unique {
