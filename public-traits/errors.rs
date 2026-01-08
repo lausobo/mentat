@@ -155,16 +155,4 @@ impl From<rusqlite::Error> for MentatError {
     }
 }
 
-#[cfg(feature = "syncable")]
-impl From<hyper::Error> for MentatError {
-    fn from(error: hyper::Error) -> MentatError {
-        MentatError::NetworkError(error)
-    }
-}
-
-#[cfg(feature = "syncable")]
-impl From<hyper::error::UriError> for MentatError {
-    fn from(error: hyper::error::UriError) -> MentatError {
-        MentatError::UriError(error)
-    }
-}
+// From impls for hyper errors are provided by the derive via #[from].
