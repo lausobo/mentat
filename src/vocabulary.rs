@@ -101,7 +101,7 @@ use core_traits::attribute::{
     Unique,
 };
 
-use ::{
+use crate::{
     CORE_SCHEMA_VERSION,
     Attribute,
     Entid,
@@ -113,7 +113,7 @@ use ::{
     ValueType,
 };
 
-use ::errors::{
+use crate::errors::{
     MentatError,
     Result,
 };
@@ -607,7 +607,7 @@ pub trait VersionedStore: HasVocabularies + HasSchema {
     ///
     /// Use this function instead of calling `ensure_vocabulary` if you need to have pre/post
     /// functions invoked when vocabulary changes are necessary.
-    fn ensure_vocabularies(&mut self, vocabularies: &mut VocabularySource) -> Result<BTreeMap<Keyword, VocabularyOutcome>>;
+    fn ensure_vocabularies(&mut self, vocabularies: &mut dyn VocabularySource) -> Result<BTreeMap<Keyword, VocabularyOutcome>>;
 
     /// Make sure that our expectations of the core vocabulary — basic types and attributes — are met.
     fn verify_core_schema(&self) -> Result<()> {
@@ -684,7 +684,7 @@ impl<'a, 'c> VersionedStore for InProgress<'a, 'c> {
         }
     }
 
-    fn ensure_vocabularies(&mut self, vocabularies: &mut VocabularySource) -> Result<BTreeMap<Keyword, VocabularyOutcome>> {
+    fn ensure_vocabularies(&mut self, vocabularies: &mut dyn VocabularySource) -> Result<BTreeMap<Keyword, VocabularyOutcome>> {
         let definitions = vocabularies.definitions();
 
         let mut update  = Vec::new();
@@ -758,7 +758,7 @@ pub trait VocabularySource {
 
     /// Called before the supplied `Definition`s are transacted. Do not commit the `InProgress`.
     /// If this function returns `Err`, the entire vocabulary operation will fail.
-    fn pre(&mut self, _in_progress: &mut InProgress, _checks: &VocabularyStatus) -> Result<()> {
+    fn pre(&mut self, _in_progress: &mut InProgress, _checks: &dyn VocabularyStatus) -> Result<()> {
         Ok(())
     }
 
@@ -794,7 +794,7 @@ impl SimpleVocabularySource {
 }
 
 impl VocabularySource for SimpleVocabularySource {
-    fn pre(&mut self, in_progress: &mut InProgress, _checks: &VocabularyStatus) -> Result<()> {
+    fn pre(&mut self, in_progress: &mut InProgress, _checks: &dyn VocabularyStatus) -> Result<()> {
         self.pre.map(|pre| (pre)(in_progress)).unwrap_or(Ok(()))
     }
 
