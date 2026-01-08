@@ -36,9 +36,9 @@ use public_traits::errors::{
     Result,
 };
 
-use logger::d;
+use crate::logger::d;
 
-use types::{
+use crate::types::{
     Tx,
     TxPart,
     GlobalTransactionLog,

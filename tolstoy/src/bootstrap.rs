@@ -24,11 +24,11 @@ use tolstoy_traits::errors::{
     TolstoyError,
 };
 
-use datoms::{
+use crate::datoms::{
     DatomsHelper,
 };
 
-use types::{
+use crate::types::{
     Tx,
 };
 

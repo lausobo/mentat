@@ -37,15 +37,18 @@ lazy_static! {
 
 pub fn ensure_current_version(tx: &mut rusqlite::Transaction) -> Result<()> {
     for statement in (&SCHEMA_STATEMENTS).iter() {
-        tx.execute(statement, &[])?;
+        tx.execute(statement, [])?;
     }
 
     // Initial partition information is what we'd see at bootstrap, and is used during first sync.
     for (name, start, end, index, allow_excision) in BOOTSTRAP_PARTITIONS.iter() {
-        tx.execute("INSERT OR IGNORE INTO tolstoy_parts VALUES (?, ?, ?, ?, ?)", &[&name.to_string(), start, end, index, allow_excision])?;
+        let name_string = name.to_string();
+        let params: [&dyn rusqlite::types::ToSql; 5] = [&name_string, start, end, index, allow_excision];
+        tx.execute("INSERT OR IGNORE INTO tolstoy_parts VALUES (?, ?, ?, ?, ?)", params)?;
     }
 
-    tx.execute("INSERT OR IGNORE INTO tolstoy_metadata (key, value) VALUES (?, zeroblob(16))", &[&REMOTE_HEAD_KEY])?;
+    let params: [&dyn rusqlite::types::ToSql; 1] = [&REMOTE_HEAD_KEY];
+    tx.execute("INSERT OR IGNORE INTO tolstoy_metadata (key, value) VALUES (?, zeroblob(16))", params)?;
     Ok(())
 }
 
@@ -54,7 +57,7 @@ pub mod tests {
     use super::*;
     use uuid::Uuid;
 
-    use metadata::{
+    use crate::metadata::{
         PartitionsTable,
         SyncMetadata,
     };
@@ -93,7 +96,7 @@ pub mod tests {
         assert!(ensure_current_version(&mut tx).is_ok());
 
         let mut stmt = tx.prepare("SELECT key FROM tolstoy_metadata WHERE value = zeroblob(16)").unwrap();
-        let mut keys_iter = stmt.query_map(&[], |r| r.get(0)).expect("query works");
+        let mut keys_iter = stmt.query_map([], |r| r.get(0)).expect("query works");
 
         let first: Result<String> = keys_iter.next().unwrap().map_err(|e| e.into());
         let second: Option<_> = keys_iter.next();
@@ -127,7 +130,8 @@ pub mod tests {
         let test_uuid = Uuid::new_v4();
         {
             let uuid_bytes = test_uuid.as_bytes().to_vec();
-            match tx.execute("UPDATE tolstoy_metadata SET value = ? WHERE key = ?", &[&uuid_bytes, &REMOTE_HEAD_KEY]) {
+            let params: [&dyn rusqlite::types::ToSql; 2] = [&uuid_bytes, REMOTE_HEAD_KEY];
+            match tx.execute("UPDATE tolstoy_metadata SET value = ? WHERE key = ?", params) {
                 Err(e) => panic!("Error running an update: {}", e),
                 _ => ()
             }
@@ -143,7 +147,7 @@ pub mod tests {
 
         // Check that running ensure_current_version on an initialized conn doesn't change anything.
         let mut stmt = tx.prepare("SELECT value FROM tolstoy_metadata").unwrap();
-        let mut values_iter = stmt.query_map(&[], |r| {
+        let mut values_iter = stmt.query_map([], |r| {
             let raw_uuid: Vec<u8> = r.get(0);
             Uuid::from_bytes(raw_uuid.as_slice()).unwrap()
         }).expect("query works");
