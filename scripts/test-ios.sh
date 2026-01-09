@@ -7,6 +7,9 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 # Use the current cargo-lipo release to avoid yanked dependencies.
 cargo install cargo-lipo --locked
 
+# Align Rust/C build min version with the Swift SDK deployment target to avoid linker warnings.
+export IPHONEOS_DEPLOYMENT_TARGET=12.0
+
 # If we don't list the devices available then, when we come to pick one during the test run, Travis doesn't
 # think that there are any devices available and the build fails.
 # TODO: See if there is a less time consuming way of doing this.

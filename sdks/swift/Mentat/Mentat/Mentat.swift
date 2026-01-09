@@ -215,7 +215,7 @@ extension Mentat: Observable {
      - Parameter attributes: An `Array` of `Strings` representing the attributes that the `Observing`
      wishes to be notified about if they are referenced in a transaction.
      */
-    open func register(key: String, observer: Observing, attributes: [String]) {
+    public func register(key: String, observer: Observing, attributes: [String]) {
         let attrEntIds = attributes.map({ (kw) -> Entid in
             let entid = Entid(self.entidForAttribute(attribute: kw));
             return entid
@@ -241,7 +241,7 @@ extension Mentat: Observable {
 
      - Parameter key: `String` representing an identifier for the `Observing`.
      */
-    open func unregister(key: String) {
+    public func unregister(key: String) {
         Mentat.observers.removeValue(forKey: key)
         store_unregister_observer(self.raw, key)
     }
