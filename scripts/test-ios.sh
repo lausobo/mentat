@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Install iOS targets with Rustup for 64-bit device/simulator builds.
-rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+# Install Rust targets for iOS and macOS builds.
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
 
 # Use the current cargo-lipo release to avoid yanked dependencies.
 cargo install cargo-lipo --locked
@@ -15,10 +15,40 @@ export IPHONEOS_DEPLOYMENT_TARGET=15.0
 # TODO: See if there is a less time consuming way of doing this.
 # instruments -s devices
 
-# Build Mentat as a universal iOS library.
+# Build Mentat for device, simulator, and macOS, then create an xcframework.
+ROOT_DIR="$(pwd)"
 pushd ffi
-cargo lipo --release
+cargo build --release --target aarch64-apple-ios
+cargo build --release --target aarch64-apple-ios-sim
+cargo build --release --target x86_64-apple-ios
+cargo build --release --target aarch64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
 popd
+
+XCFRAMEWORK_PATH="$ROOT_DIR/sdks/swift/Mentat/External-Dependencies/MentatFFI.xcframework"
+SIM_FAT_DIR="$ROOT_DIR/target/universal-sim/release"
+MAC_FAT_DIR="$ROOT_DIR/target/universal-macos/release"
+mkdir -p "$SIM_FAT_DIR"
+mkdir -p "$MAC_FAT_DIR"
+XCODE_LIPO="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo"
+LIPO_SIM_LIB="$SIM_FAT_DIR/libmentat_ffi.a"
+LIPO_MAC_LIB="$MAC_FAT_DIR/libmentat_ffi.a"
+rm -f "$LIPO_SIM_LIB"
+rm -f "$LIPO_MAC_LIB"
+"$XCODE_LIPO" -create \
+  "$ROOT_DIR/target/aarch64-apple-ios-sim/release/libmentat_ffi.a" \
+  "$ROOT_DIR/target/x86_64-apple-ios/release/libmentat_ffi.a" \
+  -output "$LIPO_SIM_LIB"
+"$XCODE_LIPO" -create \
+  "$ROOT_DIR/target/aarch64-apple-darwin/release/libmentat_ffi.a" \
+  "$ROOT_DIR/target/x86_64-apple-darwin/release/libmentat_ffi.a" \
+  -output "$LIPO_MAC_LIB"
+rm -rf "$XCFRAMEWORK_PATH"
+xcodebuild -create-xcframework \
+  -library "$ROOT_DIR/target/aarch64-apple-ios/release/libmentat_ffi.a" -headers "$ROOT_DIR/sdks/swift/Mentat/Mentat" \
+  -library "$LIPO_SIM_LIB" -headers "$ROOT_DIR/sdks/swift/Mentat/Mentat" \
+  -library "$LIPO_MAC_LIB" -headers "$ROOT_DIR/sdks/swift/Mentat/Mentat" \
+  -output "$XCFRAMEWORK_PATH"
 
 # Run the iOS SDK tests using xcodebuild.
 pushd sdks/swift/Mentat
@@ -64,5 +94,5 @@ if [ -z "$SIM_DEVICE_ID" ]; then
   echo "No available iPhone Simulator device found." >&2
   exit 1
 fi
-xcodebuild -configuration Debug -scheme "Mentat Debug" -sdk iphonesimulator test -destination "platform=iOS Simulator,id=$SIM_DEVICE_ID"
+xcodebuild -scheme Mentat -sdk iphonesimulator test -destination "platform=iOS Simulator,id=$SIM_DEVICE_ID"
 popd

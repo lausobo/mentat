@@ -41,7 +41,11 @@ class MentatTests: XCTestCase {
     }
 
     func readFile(forResource resource: String, withExtension ext: String, subdirectory: String ) throws -> String {
+        #if SWIFT_PACKAGE
+        let bundle = Bundle.module
+        #else
         let bundle = Bundle(for: type(of: self))
+        #endif
         let schemaUrl = bundle.url(forResource: resource, withExtension: ext, subdirectory: subdirectory)!
         let contents = try String(contentsOf: schemaUrl)
         return contents
