@@ -32,7 +32,6 @@ use edn::entities::{
 use mentat_db::{
     CORE_SCHEMA_VERSION,
     timelines,
-    debug,
     entids,
     PartitionMap,
 };
@@ -51,7 +50,7 @@ use mentat_transaction::query::{
     Variable,
 };
 
-use bootstrap::{
+use crate::bootstrap::{
     BootstrapHelper,
 };
 
@@ -62,29 +61,29 @@ use public_traits::errors::{
 use tolstoy_traits::errors::{
     TolstoyError,
 };
-use metadata::{
+use crate::metadata::{
     PartitionsTable,
     SyncMetadata,
 };
-use schema::{
+use crate::schema::{
     ensure_current_version,
 };
-use tx_uploader::TxUploader;
-use tx_processor::{
+use crate::tx_uploader::TxUploader;
+use crate::tx_processor::{
     Processor,
     TxReceiver,
 };
-use tx_mapper::{
+use crate::tx_mapper::{
     TxMapper,
 };
-use types::{
+use crate::types::{
     LocalTx,
     Tx,
     TxPart,
     GlobalTransactionLog,
 };
 
-use logger::d;
+use crate::logger::d;
 
 pub struct Syncer {}
 

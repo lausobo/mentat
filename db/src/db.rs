@@ -10,10 +10,6 @@
 
 #![allow(dead_code)]
 
-use failure::{
-    ResultExt,
-};
-
 use std::collections::HashMap;
 use std::collections::hash_map::{
     Entry,
@@ -29,8 +25,8 @@ use rusqlite::TransactionBehavior;
 use rusqlite::limits::Limit;
 use rusqlite::types::{ToSql, ToSqlOutput};
 
-use ::{repeat_values, to_namespaced_keyword};
-use bootstrap;
+use crate::{repeat_values, to_namespaced_keyword};
+use crate::bootstrap;
 
 use edn::{
     DateTime,
@@ -39,7 +35,7 @@ use edn::{
     Value,
 };
 
-use entids;
+use crate::entids;
 
 use core_traits::{
     attribute,
@@ -62,22 +58,23 @@ use mentat_core::{
 use db_traits::errors::{
     DbErrorKind,
     Result,
+    ResultExt,
 };
 
-use metadata;
-use schema::{
+use crate::metadata;
+use crate::schema::{
     SchemaBuilding,
 };
-use types::{
+use crate::types::{
     AVMap,
     AVPair,
     DB,
     Partition,
     PartitionMap,
 };
-use tx::transact;
+use crate::tx::transact;
 
-use watcher::{
+use crate::watcher::{
     NullWatcher,
 };
 
@@ -262,7 +259,7 @@ lazy_static! {
 /// Mentat manages its own SQL schema version using the user version.  See the [SQLite
 /// documentation](https://www.sqlite.org/pragma.html#pragma_user_version).
 fn set_user_version(conn: &rusqlite::Connection, version: i32) -> Result<()> {
-    conn.execute(&format!("PRAGMA user_version = {}", version), &[])
+    conn.execute(&format!("PRAGMA user_version = {}", version), [])
         .context(DbErrorKind::CouldNotSetVersionPragma)?;
     Ok(())
 }
@@ -272,18 +269,18 @@ fn set_user_version(conn: &rusqlite::Connection, version: i32) -> Result<()> {
 /// Mentat manages its own SQL schema version using the user version.  See the [SQLite
 /// documentation](https://www.sqlite.org/pragma.html#pragma_user_version).
 fn get_user_version(conn: &rusqlite::Connection) -> Result<i32> {
-    let v = conn.query_row("PRAGMA user_version", &[], |row| {
+    let v = conn.query_row("PRAGMA user_version", [], |row| {
         row.get(0)
     }).context(DbErrorKind::CouldNotGetVersionPragma)?;
     Ok(v)
 }
 
 /// Do just enough work that either `create_current_version` or sync can populate the DB.
-pub fn create_empty_current_version(conn: &mut rusqlite::Connection) -> Result<(rusqlite::Transaction, DB)> {
+pub fn create_empty_current_version(conn: &mut rusqlite::Connection) -> Result<(rusqlite::Transaction<'_>, DB)> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Exclusive)?;
 
     for statement in (&V1_STATEMENTS).iter() {
-        tx.execute(statement, &[])?;
+        tx.execute(statement, [])?;
     }
 
     set_user_version(&tx, CURRENT_VERSION)?;
@@ -298,10 +295,10 @@ pub fn create_empty_current_version(conn: &mut rusqlite::Connection) -> Result<(
 /// defined in 'known_parts'.
 fn create_current_partition_view(conn: &rusqlite::Connection) -> Result<()> {
     let mut stmt = conn.prepare("SELECT part, end FROM known_parts ORDER BY end ASC")?;
-    let known_parts: Result<Vec<(String, i64)>> = stmt.query_and_then(&[], |row| {
+    let known_parts: Result<Vec<(String, i64)>> = stmt.query_and_then([], |row| {
         Ok((
-            row.get_checked(0)?,
-            row.get_checked(1)?,
+            row.get(0)?,
+            row.get(1)?,
         ))
     })?.collect();
 
@@ -316,10 +313,10 @@ fn create_current_partition_view(conn: &rusqlite::Connection) -> Result<()> {
             min(e) AS start,
             max(e) + 1 AS idx
         FROM timelined_transactions WHERE timeline = {} GROUP BY part",
-        case.join(" "), ::TIMELINE_MAIN
+        case.join(" "), crate::TIMELINE_MAIN
     );
 
-    conn.execute(&view_stmt, &[])?;
+    conn.execute(&view_stmt, [])?;
     Ok(())
 }
 
@@ -333,7 +330,15 @@ pub fn create_current_version(conn: &mut rusqlite::Connection) -> Result<DB> {
     // This is necessary: `transact` will only UPDATE parts, not INSERT them if they're missing.
     for (part, partition) in db.partition_map.iter() {
         // TODO: Convert "keyword" part to SQL using Value conversion.
-        tx.execute("INSERT INTO known_parts (part, start, end, allow_excision) VALUES (?, ?, ?, ?)", &[part, &partition.start, &partition.end, &partition.allow_excision])?;
+        tx.execute(
+            "INSERT INTO known_parts (part, start, end, allow_excision) VALUES (?, ?, ?, ?)",
+            &[
+                part as &dyn ToSql,
+                &partition.start,
+                &partition.end,
+                &partition.allow_excision,
+            ],
+        )?;
     }
 
     create_current_partition_view(&tx)?;
@@ -433,15 +438,15 @@ impl TypedSQLValue for TypedValue {
     /// Return the corresponding SQLite `value` and `value_type_tag` pair.
     fn to_sql_value_pair<'a>(&'a self) -> (ToSqlOutput<'a>, i32) {
         match self {
-            &TypedValue::Ref(x) => (rusqlite::types::Value::Integer(x).into(), 0),
-            &TypedValue::Boolean(x) => (rusqlite::types::Value::Integer(if x { 1 } else { 0 }).into(), 1),
-            &TypedValue::Instant(x) => (rusqlite::types::Value::Integer(x.to_micros()).into(), 4),
+            &TypedValue::Ref(x) => (ToSqlOutput::Owned(rusqlite::types::Value::Integer(x)), 0),
+            &TypedValue::Boolean(x) => (ToSqlOutput::Owned(rusqlite::types::Value::Integer(if x { 1 } else { 0 })), 1),
+            &TypedValue::Instant(x) => (ToSqlOutput::Owned(rusqlite::types::Value::Integer(x.to_micros())), 4),
             // SQLite distinguishes integral from decimal types, allowing long and double to share a tag.
-            &TypedValue::Long(x) => (rusqlite::types::Value::Integer(x).into(), 5),
-            &TypedValue::Double(x) => (rusqlite::types::Value::Real(x.into_inner()).into(), 5),
-            &TypedValue::String(ref x) => (rusqlite::types::ValueRef::Text(x.as_str()).into(), 10),
-            &TypedValue::Uuid(ref u) => (rusqlite::types::Value::Blob(u.as_bytes().to_vec()).into(), 11),
-            &TypedValue::Keyword(ref x) => (rusqlite::types::ValueRef::Text(&x.to_string()).into(), 13),
+            &TypedValue::Long(x) => (ToSqlOutput::Owned(rusqlite::types::Value::Integer(x)), 5),
+            &TypedValue::Double(x) => (ToSqlOutput::Owned(rusqlite::types::Value::Real(x.into_inner())), 5),
+            &TypedValue::String(ref x) => (ToSqlOutput::Owned(rusqlite::types::Value::Text(x.as_ref().clone())), 10),
+            &TypedValue::Uuid(ref u) => (ToSqlOutput::Owned(rusqlite::types::Value::Blob(u.as_bytes().to_vec())), 11),
+            &TypedValue::Keyword(ref x) => (ToSqlOutput::Owned(rusqlite::types::Value::Text(x.to_string())), 13),
         }
     }
 
@@ -465,7 +470,7 @@ impl TypedSQLValue for TypedValue {
 pub(crate) fn read_materialized_view(conn: &rusqlite::Connection, table: &str) -> Result<Vec<(Entid, Entid, TypedValue)>> {
     let mut stmt: rusqlite::Statement = conn.prepare(format!("SELECT e, a, v, value_type_tag FROM {}", table).as_str())?;
     let m: Result<Vec<_>> = stmt.query_and_then(
-        &[],
+        [],
         row_to_datom_assertion
     )?.collect();
     m
@@ -506,8 +511,8 @@ pub fn read_partition_map(conn: &rusqlite::Connection) -> Result<PartitionMap> {
         WHERE
             part NOT IN (SELECT part FROM parts)"
     )?;
-    let m = stmt.query_and_then(&[], |row| -> Result<(String, Partition)> {
-        Ok((row.get_checked(0)?, Partition::new(row.get_checked(1)?, row.get_checked(2)?, row.get_checked(3)?, row.get_checked(4)?)))
+    let m = stmt.query_and_then([], |row| -> Result<(String, Partition)> {
+        Ok((row.get(0)?, Partition::new(row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)))
     })?.collect();
     m
 }
@@ -622,7 +627,7 @@ fn search(conn: &rusqlite::Connection) -> Result<()> {
          t.a0 = d.a"#;
 
     let mut stmt = conn.prepare_cached(s)?;
-    stmt.execute(&[]).context(DbErrorKind::CouldNotSearch)?;
+    stmt.execute([]).context(DbErrorKind::CouldNotSearch)?;
     Ok(())
 }
 
@@ -678,7 +683,7 @@ fn update_datoms(conn: &rusqlite::Connection, tx: Entid) -> Result<()> {
         DELETE FROM datoms WHERE rowid IN ids"#;
 
     let mut stmt = conn.prepare_cached(s)?;
-    stmt.execute(&[]).context(DbErrorKind::DatomsUpdateFailedToRetract)?;
+    stmt.execute([]).context(DbErrorKind::DatomsUpdateFailedToRetract)?;
 
     // Insert datoms that were added and not already present. We also must expand our bitfield into
     // flags.  Since Mentat follows Datomic and treats its input as a set, it is okay to transact
@@ -715,7 +720,7 @@ impl MentatStoring for rusqlite::Connection {
         // produce the map [a v] -> e.
         //
         // TODO: `collect` into a HashSet so that any (a, v) is resolved at most once.
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER)? as usize;
         let chunks: itertools::IntoChunks<_> = avs.into_iter().enumerate().chunks(max_vars / 4);
 
         // We'd like to `flat_map` here, but it's not obvious how to `flat_map` across `Result`.
@@ -733,12 +738,12 @@ impl MentatStoring for rusqlite::Connection {
             }).collect();
 
             // `params` reference computed values in `block`.
-            let params: Vec<&ToSql> = block.iter().flat_map(|&(ref searchid, ref a, ref value, ref value_type_tag)| {
+            let params: Vec<&dyn ToSql> = block.iter().flat_map(|&(ref searchid, ref a, ref value, ref value_type_tag)| {
                 // Avoid inner heap allocation.
-                once(searchid as &ToSql)
-                    .chain(once(a as &ToSql)
-                           .chain(once(value as &ToSql)
-                                  .chain(once(value_type_tag as &ToSql))))
+                once(searchid as &dyn ToSql)
+                    .chain(once(a as &dyn ToSql)
+                           .chain(once(value as &dyn ToSql)
+                                  .chain(once(value_type_tag as &dyn ToSql))))
             }).collect();
 
             // TODO: cache these statements for selected values of `count`.
@@ -755,8 +760,8 @@ impl MentatStoring for rusqlite::Connection {
                                     values);
             let mut stmt: rusqlite::Statement = self.prepare(s.as_str())?;
 
-            let m: Result<Vec<(i64, Entid)>> = stmt.query_and_then(&params, |row| -> Result<(i64, Entid)> {
-                Ok((row.get_checked(0)?, row.get_checked(1)?))
+            let m: Result<Vec<(i64, Entid)>> = stmt.query_and_then(params.as_slice(), |row| -> Result<(i64, Entid)> {
+                Ok((row.get(0)?, row.get(1)?))
             })?.collect();
             m
         }).collect::<Result<Vec<Vec<(i64, Entid)>>>>();
@@ -828,7 +833,7 @@ impl MentatStoring for rusqlite::Connection {
 
         for statement in &statements {
             let mut stmt = self.prepare_cached(statement)?;
-            stmt.execute(&[]).context(DbErrorKind::FailedToCreateTempTables)?;
+            stmt.execute([]).context(DbErrorKind::FailedToCreateTempTables)?;
         }
 
         Ok(())
@@ -841,7 +846,7 @@ impl MentatStoring for rusqlite::Connection {
     fn insert_non_fts_searches<'a>(&self, entities: &'a [ReducedEntity<'a>], search_type: SearchType) -> Result<()> {
         let bindings_per_statement = 6;
 
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER)? as usize;
         let chunks: itertools::IntoChunks<_> = entities.into_iter().chunks(max_vars / bindings_per_statement);
 
         // We'd like to flat_map here, but it's not obvious how to flat_map across Result.
@@ -867,15 +872,15 @@ impl MentatStoring for rusqlite::Connection {
             let block = block?;
 
             // `params` reference computed values in `block`.
-            let params: Vec<&ToSql> = block.iter().flat_map(|&(ref e, ref a, ref value, ref value_type_tag, added, ref flags)| {
+            let params: Vec<&dyn ToSql> = block.iter().flat_map(|&(ref e, ref a, ref value, ref value_type_tag, added, ref flags)| {
                 // Avoid inner heap allocation.
                 // TODO: extract some finite length iterator to make this less indented!
-                once(e as &ToSql)
-                    .chain(once(a as &ToSql)
-                           .chain(once(value as &ToSql)
-                                  .chain(once(value_type_tag as &ToSql)
-                                         .chain(once(to_bool_ref(added) as &ToSql)
-                                                .chain(once(flags as &ToSql))))))
+                once(e as &dyn ToSql)
+                    .chain(once(a as &dyn ToSql)
+                           .chain(once(value as &dyn ToSql)
+                                  .chain(once(value_type_tag as &dyn ToSql)
+                                         .chain(once(to_bool_ref(added) as &dyn ToSql)
+                                                .chain(once(flags as &dyn ToSql))))))
             }).collect();
 
             // TODO: cache this for selected values of count.
@@ -890,7 +895,7 @@ impl MentatStoring for rusqlite::Connection {
 
             // TODO: consider ensuring we inserted the expected number of rows.
             let mut stmt = self.prepare_cached(s.as_str())?;
-            stmt.execute(&params)
+            stmt.execute(params.as_slice())
                 .context(DbErrorKind::NonFtsInsertionIntoTempSearchTableFailed)
                 .map_err(|e| e.into())
                 .map(|_c| ())
@@ -904,7 +909,7 @@ impl MentatStoring for rusqlite::Connection {
     /// Eventually, the details of this approach will be captured in
     /// https://github.com/mozilla/mentat/wiki/Transacting:-entity-to-SQL-translation.
     fn insert_fts_searches<'a>(&self, entities: &'a [ReducedEntity<'a>], search_type: SearchType) -> Result<()> {
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER)? as usize;
         let bindings_per_statement = 6;
 
         let mut outer_searchid = 2000;
@@ -961,15 +966,15 @@ impl MentatStoring for rusqlite::Connection {
 
             // First, insert all fulltext string values.
             // `fts_params` reference computed values in `block`.
-            let fts_params: Vec<&ToSql> =
+            let fts_params: Vec<&dyn ToSql> =
                 block.iter()
                      .filter(|&&(ref _e, ref _a, ref value, ref _value_type_tag, _added, ref _flags, ref _searchid)| {
                          value.is_some()
                      })
                      .flat_map(|&(ref _e, ref _a, ref value, ref _value_type_tag, _added, ref _flags, ref searchid)| {
                          // Avoid inner heap allocation.
-                         once(value as &ToSql)
-                             .chain(once(searchid as &ToSql))
+                         once(value as &dyn ToSql)
+                             .chain(once(searchid as &dyn ToSql))
                      }).collect();
 
             // TODO: make this maximally efficient. It's not terribly inefficient right now.
@@ -978,19 +983,19 @@ impl MentatStoring for rusqlite::Connection {
 
             // TODO: consider ensuring we inserted the expected number of rows.
             let mut stmt = self.prepare_cached(fts_s.as_str())?;
-            stmt.execute(&fts_params).context(DbErrorKind::FtsInsertionFailed)?;
+            stmt.execute(fts_params.as_slice()).context(DbErrorKind::FtsInsertionFailed)?;
 
             // Second, insert searches.
             // `params` reference computed values in `block`.
-            let params: Vec<&ToSql> = block.iter().flat_map(|&(ref e, ref a, ref _value, ref value_type_tag, added, ref flags, ref searchid)| {
+            let params: Vec<&dyn ToSql> = block.iter().flat_map(|&(ref e, ref a, ref _value, ref value_type_tag, added, ref flags, ref searchid)| {
                 // Avoid inner heap allocation.
                 // TODO: extract some finite length iterator to make this less indented!
-                once(e as &ToSql)
-                    .chain(once(a as &ToSql)
-                           .chain(once(searchid as &ToSql)
-                                  .chain(once(value_type_tag as &ToSql)
-                                         .chain(once(to_bool_ref(added) as &ToSql)
-                                                .chain(once(flags as &ToSql))))))
+                once(e as &dyn ToSql)
+                    .chain(once(a as &dyn ToSql)
+                           .chain(once(searchid as &dyn ToSql)
+                                  .chain(once(value_type_tag as &dyn ToSql)
+                                         .chain(once(to_bool_ref(added) as &dyn ToSql)
+                                                .chain(once(flags as &dyn ToSql))))))
             }).collect();
 
             // TODO: cache this for selected values of count.
@@ -1006,14 +1011,14 @@ impl MentatStoring for rusqlite::Connection {
 
             // TODO: consider ensuring we inserted the expected number of rows.
             let mut stmt = self.prepare_cached(s.as_str())?;
-            stmt.execute(&params).context(DbErrorKind::FtsInsertionIntoTempSearchTableFailed)
+            stmt.execute(params.as_slice()).context(DbErrorKind::FtsInsertionIntoTempSearchTableFailed)
                 .map_err(|e| e.into())
                 .map(|_c| ())
         }).collect::<Result<Vec<()>>>();
 
         // Finally, clean up temporary searchids.
         let mut stmt = self.prepare_cached("UPDATE fulltext_values SET searchid = NULL WHERE searchid IS NOT NULL")?;
-        stmt.execute(&[]).context(DbErrorKind::FtsFailedToDropSearchIds)?;
+        stmt.execute([]).context(DbErrorKind::FtsFailedToDropSearchIds)?;
         results.map(|_| ())
     }
 
@@ -1051,7 +1056,7 @@ impl MentatStoring for rusqlite::Connection {
 
         let mut stmt = self.prepare_cached(&sql_stmt)?;
         let m: Result<Vec<_>> = stmt.query_and_then(
-            &[],
+            [],
             row_to_transaction_assertion
         )?.collect();
         m
@@ -1070,7 +1075,7 @@ pub fn committed_metadata_assertions(conn: &rusqlite::Connection, tx_id: Entid) 
 
     let mut stmt = conn.prepare_cached(&sql_stmt)?;
     let m: Result<Vec<_>> = stmt.query_and_then(
-        &[&tx_id as &ToSql],
+        &[&tx_id as &dyn ToSql],
         row_to_transaction_assertion
     )?.collect();
     m
@@ -1079,19 +1084,19 @@ pub fn committed_metadata_assertions(conn: &rusqlite::Connection, tx_id: Entid) 
 /// Takes a row, produces a transaction quadruple.
 fn row_to_transaction_assertion(row: &rusqlite::Row) -> Result<(Entid, Entid, TypedValue, bool)> {
     Ok((
-        row.get_checked(0)?,
-        row.get_checked(1)?,
-        TypedValue::from_sql_value_pair(row.get_checked(2)?, row.get_checked(3)?)?,
-        row.get_checked(4)?
+        row.get(0)?,
+        row.get(1)?,
+        TypedValue::from_sql_value_pair(row.get(2)?, row.get(3)?)?,
+        row.get(4)?
     ))
 }
 
 /// Takes a row, produces a datom quadruple.
 fn row_to_datom_assertion(row: &rusqlite::Row) -> Result<(Entid, Entid, TypedValue)> {
     Ok((
-        row.get_checked(0)?,
-        row.get_checked(1)?,
-        TypedValue::from_sql_value_pair(row.get_checked(2)?, row.get_checked(3)?)?
+        row.get(0)?,
+        row.get(1)?,
+        TypedValue::from_sql_value_pair(row.get(2)?, row.get(3)?)?
     ))
 }
 
@@ -1101,7 +1106,7 @@ fn row_to_datom_assertion(row: &rusqlite::Row) -> Result<(Entid, Entid, TypedVal
 /// "datoms" and "transactions" table as appropriate.
 pub fn update_metadata(conn: &rusqlite::Connection, _old_schema: &Schema, new_schema: &Schema, metadata_report: &metadata::MetadataReport) -> Result<()>
 {
-    use metadata::AttributeAlteration::*;
+    use crate::metadata::AttributeAlteration::*;
 
     // Populate the materialized view directly from datoms (and, potentially in the future,
     // transactions).  This might generalize nicely as we expand the set of materialized views.
@@ -1110,9 +1115,9 @@ pub fn update_metadata(conn: &rusqlite::Connection, _old_schema: &Schema, new_sc
     if !metadata_report.idents_altered.is_empty() {
         // Idents is the materialized view of the [entid :db/ident ident] slice of datoms.
         conn.execute(format!("DELETE FROM idents").as_str(),
-                     &[])?;
+                     [])?;
         conn.execute(format!("INSERT INTO idents SELECT e, a, v, value_type_tag FROM datoms WHERE a IN {}", entids::IDENTS_SQL_LIST.as_str()).as_str(),
-                     &[])?;
+                     [])?;
     }
 
     // Populate the materialized view directly from datoms.
@@ -1127,7 +1132,7 @@ pub fn update_metadata(conn: &rusqlite::Connection, _old_schema: &Schema, new_sc
         || !metadata_report.idents_altered.is_empty() {
 
         conn.execute(format!("DELETE FROM schema").as_str(),
-                     &[])?;
+                     [])?;
         // NB: we're using :db/valueType as a placeholder for the entire schema-defining set.
         let s = format!(r#"
             WITH s(e) AS (SELECT e FROM datoms WHERE a = {})
@@ -1136,7 +1141,7 @@ pub fn update_metadata(conn: &rusqlite::Connection, _old_schema: &Schema, new_sc
             FROM datoms, s
             WHERE s.e = datoms.e AND a IN {}
         "#, entids::DB_VALUE_TYPE, entids::SCHEMA_SQL_LIST.as_str());
-        conn.execute(&s, &[])?;
+        conn.execute(&s, [])?;
     }
 
     let mut index_stmt = conn.prepare("UPDATE datoms SET index_avet = ? WHERE a = ?")?;
@@ -1157,12 +1162,12 @@ SELECT EXISTS
             match alteration {
                 &Index => {
                     // This should always succeed.
-                    index_stmt.execute(&[&attribute.index, &entid as &ToSql])?;
+                    index_stmt.execute(&[&attribute.index, &entid as &dyn ToSql])?;
                 },
                 &Unique => {
                     // TODO: This can fail if there are conflicting values; give a more helpful
                     // error message in this case.
-                    if unique_value_stmt.execute(&[to_bool_ref(attribute.unique.is_some()), &entid as &ToSql]).is_err() {
+                    if unique_value_stmt.execute(&[to_bool_ref(attribute.unique.is_some()), &entid as &dyn ToSql]).is_err() {
                         match attribute.unique {
                             Some(attribute::Unique::Value) => bail!(DbErrorKind::SchemaAlterationFailed(format!("Cannot alter schema attribute {} to be :db.unique/value", entid))),
                             Some(attribute::Unique::Identity) => bail!(DbErrorKind::SchemaAlterationFailed(format!("Cannot alter schema attribute {} to be :db.unique/identity", entid))),
@@ -1177,8 +1182,8 @@ SELECT EXISTS
                     // TODO: improve the failure message.  Perhaps try to mimic what Datomic says in
                     // this case?
                     if !attribute.multival {
-                        let mut rows = cardinality_stmt.query(&[&entid as &ToSql])?;
-                        if rows.next().is_some() {
+                        let mut rows = cardinality_stmt.query(&[&entid as &dyn ToSql])?;
+                        if rows.next()?.is_some() {
                             bail!(DbErrorKind::SchemaAlterationFailed(format!("Cannot alter schema attribute {} to be :db.cardinality/one", entid)));
                         }
                     }
@@ -1221,7 +1226,7 @@ mod tests {
     };
 
     use super::*;
-    use debug::{TestConn,tempids};
+    use crate::debug::{TestConn,tempids};
     use edn::{
         self,
         InternSet,
@@ -1242,7 +1247,7 @@ mod tests {
         BTreeMap,
     };
     use db_traits::errors as errors;
-    use internal_types::{
+    use crate::internal_types::{
         Term,
     };
 
@@ -1625,13 +1630,13 @@ mod tests {
     #[test]
     fn test_sqlite_limit() {
         let conn = new_connection("").expect("Couldn't open in-memory db");
-        let initial = conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER);
+        let initial = conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap();
         // Sanity check.
         assert!(initial > 500);
 
         // Make sure setting works.
-        conn.set_limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER, 222);
-        assert_eq!(222, conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER));
+        conn.set_limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER, 222).unwrap();
+        assert_eq!(222, conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap());
     }
 
     #[test]
@@ -2745,7 +2750,7 @@ mod tests {
     fn test_sqlcipher_openable() {
         let secret_key = "key";
         let sqlite = new_connection_with_key("../fixtures/v1encrypted.db", secret_key).expect("Failed to find test DB");
-        sqlite.query_row("SELECT COUNT(*) FROM sqlite_master", &[], |row| row.get::<_, i64>(0))
+        sqlite.query_row("SELECT COUNT(*) FROM sqlite_master", [], |row| row.get::<_, i64>(0))
             .expect("Failed to execute sql query on encrypted DB");
     }
 

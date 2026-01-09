@@ -26,7 +26,7 @@ use edn::query::{
     Variable,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
 };
 
@@ -35,7 +35,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     EmptyBecause,
 };
 

@@ -14,7 +14,7 @@ import MentatStore
 
 public extension UUID {
     /** Helper to construct a UUID from a Rust [u8; 16] without leaking it. */
-    public init(destroyingRustUUID rawUUID: UnsafeMutablePointer<uuid_t>) {
+    init(destroyingRustUUID rawUUID: UnsafeMutablePointer<uuid_t>) {
         defer { uuid_destroy(rawUUID); }
         self.init(uuid: rawUUID.pointee)
     }

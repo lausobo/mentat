@@ -94,7 +94,7 @@ open class RelResultIterator: OptionalRustObject, IteratorProtocol  {
 }
 
 extension RelResult: Sequence {
-    open func makeIterator() -> RelResultIterator {
+    public func makeIterator() -> RelResultIterator {
         do {
             let rowIter = typed_value_result_set_into_iter(try self.validPointer())
             self.raw = nil

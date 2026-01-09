@@ -1,6 +1,7 @@
 [package]
 name = "core_traits"
 version = "0.0.1"
+edition = "2024"
 workspace = ".."
 
 [lib]
@@ -10,7 +11,7 @@ path = "lib.rs"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 enum-set = "0.0.7"
-lazy_static = "0.2"
+lazy_static = "1.4"
 indexmap = "1"
 ordered-float = { version = "0.5", features = ["serde"] }
 uuid = { version = "0.5", features = ["v4", "serde"] }

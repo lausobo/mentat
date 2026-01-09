@@ -20,7 +20,7 @@ use edn::query::{
     WhereFn,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
 };
 
@@ -30,7 +30,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     Column,
     ColumnConstraint,
     DatomsTable,
@@ -41,7 +41,7 @@ use types::{
     TransactionsColumn,
 };
 
-use Known;
+use crate::Known;
 
 impl ConjoiningClauses {
     // Log in Query: tx-ids and tx-data

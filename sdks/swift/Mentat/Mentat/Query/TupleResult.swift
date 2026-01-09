@@ -207,7 +207,7 @@ open class ColResultIterator: OptionalRustObject, IteratorProtocol  {
 }
 
 extension ColResult: Sequence {
-    open func makeIterator() -> ColResultIterator {
+    public func makeIterator() -> ColResultIterator {
         defer {
             self.raw = nil
         }

@@ -1240,4 +1240,15 @@ class MentatTests: XCTestCase {
     }
 
     // TODO: Add tests for transaction observation
+
+    @available(iOS 13.0, *)
+    func testAsyncRunScalar() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = "[:find ?n . :in ?name :where [(fulltext $ :community/name ?name) [[?e ?n]]]]"
+        let value = try await mentat.query(query: query)
+            .bind(varName: "?name", toString: "Wallingford")
+            .runScalar()
+        XCTAssertNotNil(value)
+        XCTAssertEqual(value?.asString(), "KOMO Communities - Wallingford")
+    }
 }

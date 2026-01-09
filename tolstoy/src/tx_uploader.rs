@@ -25,16 +25,16 @@ use public_traits::errors::{
     Result,
 };
 
-use tx_processor::{
+use crate::tx_processor::{
     TxReceiver,
 };
 
-use types::{
+use crate::types::{
     TxPart,
     GlobalTransactionLog,
 };
 
-use logger::d;
+use crate::logger::d;
 
 pub struct UploaderReport {
     pub temp_uuids: HashMap<Entid, Uuid>,
@@ -43,14 +43,14 @@ pub struct UploaderReport {
 
 pub(crate) struct TxUploader<'c> {
     tx_temp_uuids: HashMap<Entid, Uuid>,
-    remote_client: &'c mut GlobalTransactionLog,
+    remote_client: &'c mut dyn GlobalTransactionLog,
     remote_head: &'c Uuid,
     rolling_temp_head: Option<Uuid>,
     local_partitions: PartitionMap,
 }
 
 impl<'c> TxUploader<'c> {
-    pub fn new(client: &'c mut GlobalTransactionLog, remote_head: &'c Uuid, local_partitions: PartitionMap) -> TxUploader<'c> {
+    pub fn new(client: &'c mut dyn GlobalTransactionLog, remote_head: &'c Uuid, local_partitions: PartitionMap) -> TxUploader<'c> {
         TxUploader {
             tx_temp_uuids: HashMap::new(),
             remote_client: client,
@@ -157,7 +157,7 @@ pub mod tests {
         V1_PARTS,
     };
 
-    use schema::{
+    use crate::schema::{
         PARTITION_USER,
         PARTITION_TX,
         PARTITION_DB,

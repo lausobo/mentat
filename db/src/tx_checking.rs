@@ -23,7 +23,7 @@ use db_traits::errors::{
     CardinalityConflict,
 };
 
-use internal_types::{
+use crate::internal_types::{
     AEVTrie,
 };
 

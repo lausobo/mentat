@@ -260,6 +260,19 @@ open class Query: OptionalRustObject {
         callback(RelResult(raw: results))
     }
 
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    open func run() async throws -> RelResult? {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RelResult?, Error>) in
+            do {
+                try run { result in
+                    continuation.resume(returning: result)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
     /**
      Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a single `TypedValue`.
 
@@ -284,6 +297,20 @@ open class Query: OptionalRustObject {
         }
         callback(TypedValue(raw: results))
     }
+
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    open func runScalar() async throws -> TypedValue? {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TypedValue?, Error>) in
+            do {
+                try runScalar { result in
+                    continuation.resume(returning: result)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
 
     /**
      Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a list of single `TypedValues`.
@@ -310,6 +337,19 @@ open class Query: OptionalRustObject {
         callback(ColResult(raw: results))
     }
 
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    open func runColl() async throws -> ColResult? {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ColResult?, Error>) in
+            do {
+                try runColl { result in
+                    continuation.resume(returning: result)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
     /**
      Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a list of single `TypedValues`.
 
@@ -333,6 +373,19 @@ open class Query: OptionalRustObject {
             return
         }
         callback(TupleResult(raw: results))
+    }
+
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    open func runTuple() async throws -> TupleResult? {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TupleResult?, Error>) in
+            do {
+                try runTuple { result in
+                    continuation.resume(returning: result)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 
     override open func cleanup(pointer: OpaquePointer) {

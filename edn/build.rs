@@ -10,6 +10,48 @@
 
 extern crate peg;
 
+use std::env;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::exit;
+
 fn main() {
-    peg::cargo_build("src/edn.rustpeg");
+    let input_path = Path::new("src/edn.rustpeg");
+    if let Err(e) = build_with_ranges(input_path) {
+        let mut stderr = io::stderr();
+        writeln!(
+            stderr,
+            "Could not build PEG grammar `{}`: {}",
+            input_path.display(),
+            e
+        )
+        .ok();
+        exit(1);
+    }
+}
+
+fn build_with_ranges(input_path: &Path) -> io::Result<()> {
+    let mut peg_source = String::new();
+    File::open(input_path)?.read_to_string(&mut peg_source)?;
+    println!("cargo:rerun-if-changed={}", input_path.display());
+
+    let mut rust_source = match peg::compile(&peg_source) {
+        Ok(source) => source,
+        Err(e) => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error compiling PEG grammar `{}`: {}", input_path.display(), e),
+            ));
+        }
+    };
+
+    // peg 0.5 emits deprecated `...` range patterns; normalize to `..=` for newer Rust editions.
+    rust_source = rust_source.replace(" ... ", " ..= ");
+
+    let out_dir: PathBuf = env::var_os("OUT_DIR").unwrap().into();
+    let rust_path = out_dir.join(input_path.file_name().unwrap()).with_extension("rs");
+    File::create(&rust_path)?.write_all(rust_source.as_bytes())?;
+
+    Ok(())
 }

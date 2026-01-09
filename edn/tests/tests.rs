@@ -280,7 +280,7 @@ fn test_inst() {
     assert!(parse::value("#inst \"2016-01-01T11:00:00.000\"").is_err());   // No timezone.
     assert!(parse::value("#inst \"2016-01-01T11:00:00.000z\"").is_err());  // Lowercase timezone.
 
-    let expected = Utc.timestamp(1493410985, 187000000);
+    let expected = Utc.timestamp_opt(1493410985, 187000000).single().unwrap();
     let s = "#inst \"2017-04-28T20:23:05.187Z\"";
     let actual = parse::value(s)
                        .expect("parse success")
@@ -456,10 +456,16 @@ fn test_value() {
     assert_eq!(value("{1 2}").unwrap(), Map(BTreeMap::from_iter(vec![(Integer(1), Integer(2))])));
     assert_eq!(value("#uuid \"e43c6f3e-3123-49b7-8098-9b47a7bc0fa4\"").unwrap(),
                Uuid(uuid::Uuid::parse_str("e43c6f3e-3123-49b7-8098-9b47a7bc0fa4").unwrap()));
-    assert_eq!(value("#instmillis 1493410985187").unwrap(), Instant(Utc.timestamp(1493410985, 187000000)));
-    assert_eq!(value("#instmicros 1493410985187123").unwrap(), Instant(Utc.timestamp(1493410985, 187123000)));
+    assert_eq!(
+        value("#instmillis 1493410985187").unwrap(),
+        Instant(Utc.timestamp_opt(1493410985, 187000000).single().unwrap())
+    );
+    assert_eq!(
+        value("#instmicros 1493410985187123").unwrap(),
+        Instant(Utc.timestamp_opt(1493410985, 187123000).single().unwrap())
+    );
     assert_eq!(value("#inst \"2017-04-28T20:23:05.187Z\"").unwrap(),
-               Instant(Utc.timestamp(1493410985, 187000000)));
+               Instant(Utc.timestamp_opt(1493410985, 187000000).single().unwrap()));
 }
 
 #[test]

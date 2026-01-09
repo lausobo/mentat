@@ -1,6 +1,7 @@
 [package]
 name = "mentat_db"
 version = "0.0.1"
+edition = "2024"
 workspace = ".."
 
 [features]
@@ -9,10 +10,10 @@ sqlcipher = ["rusqlite/sqlcipher"]
 syncable = ["serde", "serde_json", "serde_derive"]
 
 [dependencies]
-failure = "0.1.1"
+anyhow = "1"
 indexmap = "1"
 itertools = "0.7"
-lazy_static = "0.2"
+lazy_static = "1.4"
 log = "0.4"
 ordered-float = "0.5"
 time = "0.1"
@@ -22,7 +23,7 @@ serde_json = { version = "1.0", optional = true }
 serde_derive = { version = "1.0", optional = true }
 
 [dependencies.rusqlite]
-version = "0.13"
+version = "0.38.0"
 features = ["limits"]
 
 [dependencies.edn]

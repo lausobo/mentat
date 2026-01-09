@@ -26,12 +26,12 @@ use edn::query::{
     WhereFn,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
     PushComputed,
 };
 
-use clauses::convert::ValueConversion;
+use crate::clauses::convert::ValueConversion;
 
 use query_algebrizer_traits::errors::{
     AlgebrizerError,
@@ -39,14 +39,14 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     ComputedTable,
     EmptyBecause,
     SourceAlias,
     VariableColumn,
 };
 
-use Known;
+use crate::Known;
 
 impl ConjoiningClauses {
     /// Take a relation: a matrix of values which will successively bind to named variables of
@@ -337,7 +337,7 @@ mod testing {
         Variable,
     };
 
-    use clauses::{
+    use crate::clauses::{
         add_attribute,
         associate_ident,
     };

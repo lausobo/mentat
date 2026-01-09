@@ -17,9 +17,7 @@ use std::ops::{
     DerefMut,
 };
 
-use ::{
-    ValueRc,
-};
+use crate::ValueRc;
 
 /// An `InternSet` allows to "intern" some potentially large values, maintaining a single value
 /// instance owned by the `InternSet` and leaving consumers with lightweight ref-counted handles to

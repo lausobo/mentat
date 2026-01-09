@@ -398,7 +398,7 @@ mod tests {
         Variable,
     };
 
-    use ::{
+    use crate::{
         IntoResult,
         QueryInputs,
         QueryResults,

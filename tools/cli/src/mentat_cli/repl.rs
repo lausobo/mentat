@@ -7,12 +7,11 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+#![allow(deprecated)]
 
 use std::io::Write;
 
-use failure::{
-    Error,
-};
+use anyhow::Error;
 
 use linefeed::{
     Interface,
@@ -47,11 +46,11 @@ use mentat::{
     TypedValue,
 };
 
-use command_parser::{
+use crate::command_parser::{
     Command,
 };
 
-use command_parser::{
+use crate::command_parser::{
     COMMAND_CACHE,
     COMMAND_EXIT_LONG,
     COMMAND_EXIT_SHORT,
@@ -74,17 +73,17 @@ use command_parser::{
 // we weren't compiled with sqlcipher), but they're unused, since we
 // omit them from help message (since they wouldn't work).
 #[cfg(feature = "sqlcipher")]
-use command_parser::{
+use crate::command_parser::{
     COMMAND_OPEN_ENCRYPTED,
 };
 
 #[cfg(feature = "syncable")]
-use command_parser::{
+use crate::command_parser::{
     COMMAND_SYNC,
 };
 
-use input::InputReader;
-use input::InputResult::{
+use crate::input::InputReader;
+use crate::input::InputResult::{
     Empty,
     Eof,
     MetaCommand,
@@ -130,7 +129,7 @@ lazy_static! {
 }
 
 fn eprint_out(s: &str) {
-    eprint!("{green}{s}{reset}", green = color::Fg(::GREEN), s = s, reset = color::Fg(color::Reset));
+    eprint!("{green}{s}{reset}", green = color::Fg(crate::GREEN), s = s, reset = color::Fg(color::Reset));
 }
 
 fn parse_namespaced_keyword(input: &str) -> Option<Keyword> {
