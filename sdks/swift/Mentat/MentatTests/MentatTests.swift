@@ -1251,4 +1251,59 @@ class MentatTests: XCTestCase {
         XCTAssertNotNil(value)
         XCTAssertEqual(value?.asString(), "KOMO Communities - Wallingford")
     }
+
+    @available(iOS 13.0, *)
+    func testAsyncRunColl() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = "[:find [?when ...] :where [_ :db/txInstant ?when] :order (asc ?when)]"
+        let rows = try await mentat.query(query: query).runColl()
+        XCTAssertNotNil(rows)
+        var count = 0
+        rows?.forEach({ _ in
+            count += 1
+        })
+        XCTAssertEqual(count, 3)
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncRunTuple() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = """
+        [:find [?name ?cat]
+        :where
+        [?c :community/name ?name]
+        [?c :community/type :community.type/website]
+        [(fulltext $ :community/category "food") [[?c ?cat]]]]
+        """
+        let tuple = try await mentat.query(query: query).runTuple()
+        XCTAssertNotNil(tuple)
+        XCTAssertEqual(tuple?.asString(index: 0), "Community Harvest of Southwest Seattle")
+        XCTAssertEqual(tuple?.asString(index: 1), "sustainable food")
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncRunRel() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = """
+        [:find ?name ?cat
+        :where
+        [?c :community/name ?name]
+        [?c :community/type :community.type/website]
+        [(fulltext $ :community/category "food") [[?c ?cat]]]]
+        """
+        let expectedResults = [("InBallard", "food"),
+                               ("Seattle Chinatown Guide", "food"),
+                               ("Community Harvest of Southwest Seattle", "sustainable food"),
+                               ("University District Food Bank", "food bank")]
+        let rows = try await mentat.query(query: query).run()
+        XCTAssertNotNil(rows)
+        var i = 0
+        rows?.forEach({ row in
+            let (name, category) = expectedResults[i]
+            i += 1
+            XCTAssertEqual(row.asString(index: 0), name)
+            XCTAssertEqual(row.asString(index: 1), category)
+        })
+        XCTAssertEqual(i, expectedResults.count)
+    }
 }
