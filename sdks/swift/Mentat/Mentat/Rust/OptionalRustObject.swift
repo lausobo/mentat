@@ -62,7 +62,6 @@ open class OptionalRustObject: Destroyable {
     }
 
     open func cleanup(pointer: OpaquePointer) {
-        fatalError("\(cleanup) is not implemented.")
+        fatalError("cleanup(pointer:) is not implemented.")
     }
 }
-
