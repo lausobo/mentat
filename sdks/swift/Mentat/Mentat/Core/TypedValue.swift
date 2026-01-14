@@ -206,4 +206,18 @@ open class TypedValue: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            let type = valueType
+            return "<TypedValue pointer=\(pointer) valueType=\(type.rawValue) cached=\(value != nil)>"
+        } else if let value = value {
+            return "<TypedValue pointer=nil (consumed) cachedValue=\(value)>"
+        } else {
+            return "<TypedValue pointer=nil (consumed) cachedValue=nil>"
+        }
+    }
 }

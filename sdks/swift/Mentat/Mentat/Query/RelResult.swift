@@ -69,6 +69,17 @@ open class RelResult: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_result_set_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<RelResult pointer=\(pointer)>"
+        } else {
+            return "<RelResult pointer=nil (iterated)>"
+        }
+    }
 }
 
 /**
@@ -102,6 +113,17 @@ open class RelResultIterator: OptionalRustObject, IteratorProtocol, @unchecked S
 
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_result_set_iter_destroy(pointer)
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<RelResultIterator pointer=\(pointer)>"
+        } else {
+            return "<RelResultIterator pointer=nil (exhausted)>"
+        }
     }
 }
 

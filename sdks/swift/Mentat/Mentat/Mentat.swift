@@ -374,6 +374,13 @@ open class Mentat: RustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         store_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        let pointer = String(format: "%p", Int(bitPattern: raw))
+        return "<Mentat pointer=\(pointer)>"
+    }
 }
 
 /**

@@ -25,7 +25,7 @@ protocol Destroyable {
  - The underlying Rust objects are thread-safe
  - Pointer management is handled atomically by Rust
  */
-open class RustObject: Destroyable, @unchecked Sendable {
+open class RustObject: Destroyable, CustomDebugStringConvertible, @unchecked Sendable {
     var raw: OpaquePointer
 
     public init(raw: OpaquePointer) {
@@ -53,5 +53,13 @@ open class RustObject: Destroyable, @unchecked Sendable {
 
     open func cleanup(pointer: OpaquePointer) {
         fatalError("cleanup(pointer:) is not implemented.")
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    open var debugDescription: String {
+        let typeName = String(describing: type(of: self))
+        let pointer = String(format: "%p", Int(bitPattern: raw))
+        return "<\(typeName) pointer=\(pointer)>"
     }
 }

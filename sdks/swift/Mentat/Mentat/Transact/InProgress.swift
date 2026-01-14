@@ -190,4 +190,15 @@ open class InProgress: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         in_progress_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<InProgress pointer=\(pointer)>"
+        } else {
+            return "<InProgress pointer=nil (committed/rolled back)>"
+        }
+    }
 }

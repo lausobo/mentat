@@ -413,4 +413,15 @@ open class Query: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         query_builder_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<Query pointer=\(pointer)>"
+        } else {
+            return "<Query pointer=nil (executed)>"
+        }
+    }
 }

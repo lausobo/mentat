@@ -171,6 +171,17 @@ open class TupleResult: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_list_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<TupleResult pointer=\(pointer)>"
+        } else {
+            return "<TupleResult pointer=nil (consumed)>"
+        }
+    }
 }
 
 /**
@@ -214,6 +225,17 @@ open class TupleResult: OptionalRustObject, @unchecked Sendable {
  This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
 open class ColResult: TupleResult, @unchecked Sendable {
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<ColResult pointer=\(pointer)>"
+        } else {
+            return "<ColResult pointer=nil (iterated)>"
+        }
+    }
 }
 
 /**
@@ -247,6 +269,17 @@ open class ColResultIterator: OptionalRustObject, IteratorProtocol, @unchecked S
 
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_list_iter_destroy(pointer)
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<ColResultIterator pointer=\(pointer)>"
+        } else {
+            return "<ColResultIterator pointer=nil (exhausted)>"
+        }
     }
 }
 

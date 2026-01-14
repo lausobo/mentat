@@ -389,4 +389,15 @@ open class EntityBuilder: OptionalRustObject, @unchecked Sendable {
     override open func cleanup(pointer: OpaquePointer) {
         entity_builder_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<EntityBuilder pointer=\(pointer)>"
+        } else {
+            return "<EntityBuilder pointer=nil (transacted/committed)>"
+        }
+    }
 }
