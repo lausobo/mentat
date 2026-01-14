@@ -13,30 +13,42 @@ import MentatStore
 
 /**
  Wraps a `Rel` result from a Mentat query.
- A `Rel` result is a list of rows of `TypedValues`.
+
+ A `Rel` result is a list of rows of `TypedValue`s.
  Individual rows can be fetched or the set can be iterated.
 
- To fetch individual rows from a `RelResult` use `row(Int32)`.
+ ## Fetching Individual Rows
 
- ```
- query.run { rows in
-    let row1 = rows.row(0)
-    let row2 = rows.row(1)
+ To fetch individual rows from a `RelResult` use `row(index:)`:
+
+ ```swift
+ let result = try await mentat.query(query: query).run()
+ if let rows = result {
+     let row1 = try rows.row(index: 0)
+     let row2 = try rows.row(index: 1)
  }
  ```
 
- To iterate over the result set use standard iteration flows.
- ```
- query.run { rows in
-     rows.forEach { row in
-         ...
-     }
+ ## Iterating Over Results
+
+ To iterate over the result set use standard iteration:
+
+ ```swift
+ let result = try await mentat.query(query: query).run()
+ for row in result ?? [] {
+     let name = row.asString(index: 0)
+     let value = row.asLong(index: 1)
+     print("\(name): \(value)")
  }
  ```
 
- Note that iteration is consuming and can only be done once.
+ - Note: Iteration is consuming and can only be done once.
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
-open class RelResult: OptionalRustObject {
+open class RelResult: OptionalRustObject, @unchecked Sendable {
 
     /**
      Fetch the row at the requested index.
@@ -62,18 +74,18 @@ open class RelResult: OptionalRustObject {
 /**
  Iterator for `RelResult`.
 
- To iterate over the result set use standard iteration flows.
- ```
- query.run { result in
-     rows.forEach { row in
-        ...
-     }
+ To iterate over the result set use standard Swift iteration:
+
+ ```swift
+ let result = try await mentat.query(query: query).run()
+ for row in result ?? [] {
+     // Process each row
  }
  ```
 
- Note that iteration is consuming and can only be done once.
+ - Note: Iteration is consuming and can only be done once.
  */
-open class RelResultIterator: OptionalRustObject, IteratorProtocol  {
+open class RelResultIterator: OptionalRustObject, IteratorProtocol, @unchecked Sendable {
     public typealias Element = TupleResult
 
     init(iter: OpaquePointer?) {

@@ -12,6 +12,7 @@ import XCTest
 
 @testable import Mentat
 
+@MainActor
 class MentatTests: XCTestCase {
 
     var citiesSchema: String?

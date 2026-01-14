@@ -58,7 +58,7 @@ import MentatStore
  }
  ```
  */
-open class InProgressBuilder: OptionalRustObject {
+open class InProgressBuilder: OptionalRustObject, @unchecked Sendable {
 
     /**
      Asserts the value of attribute `keyword` to be the provided `value` for entity `entid`.

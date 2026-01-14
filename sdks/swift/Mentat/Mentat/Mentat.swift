@@ -15,17 +15,25 @@ import MentatStore
 public typealias Entid = Int64
 
 /**
- Protocol to be implemented by any object that wishes to register for transaction observation
+ Protocol to be implemented by any object that wishes to register for transaction observation.
+
+ - Note: This protocol is deprecated. Use `transactionStream(for:)` for modern async/await observation.
  */
-public protocol Observing {
+@available(*, deprecated, message: "Use transactionStream(for:) instead")
+public protocol Observing: Sendable {
     func transactionDidOccur(key: String, reports: [TxChange])
 }
 
 /**
  Protocol to be implemented by any object that provides an interface to Mentat's transaction observers.
+
+ - Note: This protocol is deprecated. Use `transactionStream(for:)` for modern async/await observation.
  */
+@available(*, deprecated, message: "Use transactionStream(for:) instead")
 public protocol Observable {
+    @available(*, deprecated, message: "Use transactionStream(for:) instead")
     func register(key: String, observer: Observing, attributes: [String])
+    @available(*, deprecated, message: "Use transactionStream(for:) instead")
     func unregister(key: String)
 }
 
@@ -35,13 +43,77 @@ public enum CacheDirection {
     case both;
 }
 
+/// Thread-safe storage for transaction observers
+private final class ObserverStorage: @unchecked Sendable {
+    private var observers = [String: any Observing]()
+    private let lock = NSLock()
+
+    func get(_ key: String) -> (any Observing)? {
+        lock.lock()
+        defer { lock.unlock() }
+        return observers[key]
+    }
+
+    func set(_ key: String, observer: any Observing) {
+        lock.lock()
+        defer { lock.unlock() }
+        observers[key] = observer
+    }
+
+    func remove(_ key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        observers.removeValue(forKey: key)
+    }
+}
+
 /**
  The primary class for accessing Mentat's API.
+
  This class provides all of the basic API that can be found in Mentat's Store struct.
  The raw pointer it holds is a pointer to a Store.
+
+ ## Opening a Store
+
+ ```swift
+ // In-memory store
+ let mentat = try Mentat.open()
+
+ // File-based store
+ let mentat = try Mentat.open(storeURI: "path/to/store.db")
+ ```
+
+ ## Querying (async/await)
+
+ ```swift
+ let query = "[:find ?name :where [?e :user/name ?name]]"
+ let result = try await mentat.query(query: query).run()
+
+ for row in result ?? [] {
+     print(row.asString(index: 0))
+ }
+ ```
+
+ ## Transactions
+
+ ```swift
+ // Simple transaction
+ let report = try mentat.transact(transaction: """
+     [[:db/add "tempid" :user/name "Alice"]]
+     """)
+
+ // Multi-step transaction
+ let inProgress = try mentat.beginTransaction()
+ try inProgress.transact(transaction: "[[:db/add \"a\" :user/name \"Bob\"]]")
+ try inProgress.commit()
+ ```
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
 */
-open class Mentat: RustObject {
-    fileprivate static var observers = [String: Observing]()
+open class Mentat: RustObject, @unchecked Sendable {
+    fileprivate static let observerStorage = ObserverStorage()
 
     /**
      Create a new Mentat with the provided pointer to a Mentat Store
@@ -228,7 +300,7 @@ extension Mentat: Observable {
         guard let firstElement = entidPointer.baseAddress else {
             return
         }
-        Mentat.observers[key] = observer
+        Mentat.observerStorage.set(key, observer: observer)
         store_register_observer(self.raw, key, firstElement, Entid(attributes.count), transactionObserverCallback)
 
     }
@@ -242,7 +314,7 @@ extension Mentat: Observable {
      - Parameter key: `String` representing an identifier for the `Observing`.
      */
     public func unregister(key: String) {
-        Mentat.observers.removeValue(forKey: key)
+        Mentat.observerStorage.remove(key)
         store_unregister_observer(self.raw, key)
     }
 }
@@ -254,7 +326,7 @@ extension Mentat: Observable {
  */
 private func transactionObserverCallback(key: UnsafePointer<CChar>, reports: UnsafePointer<TxChangeList>) {
     let key = String(cString: key)
-    guard let observer = Mentat.observers[key] else { return }
+    guard let observer = Mentat.observerStorage.get(key) else { return }
     DispatchQueue.global(qos: .background).async {
         observer.transactionDidOccur(key: key, reports: [TxChange]())
     }

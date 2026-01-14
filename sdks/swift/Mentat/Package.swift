@@ -1,11 +1,14 @@
-// swift-tools-version:5.7
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
     name: "Mentat",
     platforms: [
-        .iOS(.v15),
-        .macOS(.v12)
+        .iOS(.v16),
+        .macOS(.v13),
+        .tvOS(.v16),
+        .watchOS(.v9),
+        .visionOS(.v1)
     ],
     products: [
         .library(

@@ -10,20 +10,20 @@
 
 import Foundation
 
-public enum QueryError: Error {
+public enum QueryError: Error, Sendable {
     case invalidKeyword(message: String)
     case executionFailed(message: String)
 }
 
-public struct MentatError: Error {
+public struct MentatError: Error, Sendable {
     let message: String
 }
 
-public enum PointerError: Error {
+public enum PointerError: Error, Sendable {
     case pointerConsumed
 }
 
-public enum ResultError: Error {
+public enum ResultError: Error, Sendable {
     case error(message: String)
     case empty
 }

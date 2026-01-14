@@ -29,7 +29,7 @@ import MentatStore
  let aEntid = report.entid(forTempId: "a")
  ```
  */
-open class TxReport: RustObject {
+open class TxReport: RustObject, @unchecked Sendable {
 
     // The identifier for the transaction.
     open var txId: Entid {

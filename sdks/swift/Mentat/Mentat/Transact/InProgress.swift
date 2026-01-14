@@ -78,7 +78,7 @@ import MentatStore
  }
  ```
  */
-open class InProgress: OptionalRustObject {
+open class InProgress: OptionalRustObject, @unchecked Sendable {
 
     /**
      Creates an `InProgressBuilder` using this `InProgress`.

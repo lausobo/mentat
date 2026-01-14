@@ -12,16 +12,44 @@ import Foundation
 import MentatStore
 
 /**
- A wrapper around Mentat's `TypedValue` Rust object. This class wraps a raw pointer to a Rust `TypedValue`
- struct and provides accessors to the values according to expected result type.
+ A wrapper around Mentat's `TypedValue` Rust object.
 
- As the FFI functions for fetching values are consuming, this class keeps a copy of the result internally after
- fetching so that the value can be referenced several times.
+ This class wraps a raw pointer to a Rust `TypedValue` struct and provides
+ accessors to convert the value to Swift types.
 
- Also, due to the consuming nature of the FFI layer, this class also manages it's raw pointer, nilling it after calling the
- FFI conversion function so that the underlying base class can manage cleanup.
+ ## Usage
+
+ ```swift
+ let value = try await mentat.query(query: "[:find ?n . :where [_ :user/name ?n]]").runScalar()
+
+ if let result = value {
+     let name = result.asString()
+     print("Name: \(name)")
+ }
+ ```
+
+ ## Type Conversion Methods
+
+ - `asLong()` - Convert to `Int64`
+ - `asEntid()` - Convert to `Entid`
+ - `asKeyword()` - Convert to keyword `String`
+ - `asBool()` - Convert to `Bool`
+ - `asDouble()` - Convert to `Double`
+ - `asDate()` - Convert to `Date`
+ - `asString()` - Convert to `String`
+ - `asUUID()` - Convert to `UUID`
+
+ ## Important Notes
+
+ - The value can be accessed multiple times after the first conversion
+ - Converting to the wrong type will cause a panic
+ - Check `valueType` if the type is uncertain
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
-open class TypedValue: OptionalRustObject {
+open class TypedValue: OptionalRustObject, @unchecked Sendable {
 
     private var value: Any?
 

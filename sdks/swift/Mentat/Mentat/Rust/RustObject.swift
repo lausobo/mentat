@@ -20,8 +20,12 @@ protocol Destroyable {
  This class provides cleanup functions on deinit, ensuring that all classes
  that inherit from it will have their `OpaquePointer` destroyed when the Swift wrapper is destroyed.
  If a class does not override `cleanup` then a `fatalError` is thrown.
+
+ This class is marked as `@unchecked Sendable` because:
+ - The underlying Rust objects are thread-safe
+ - Pointer management is handled atomically by Rust
  */
-open class RustObject: Destroyable {
+open class RustObject: Destroyable, @unchecked Sendable {
     var raw: OpaquePointer
 
     public init(raw: OpaquePointer) {

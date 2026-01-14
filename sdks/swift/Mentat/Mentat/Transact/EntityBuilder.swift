@@ -56,7 +56,7 @@ import MentatStore
  }
  ```
  */
-open class EntityBuilder: OptionalRustObject {
+open class EntityBuilder: OptionalRustObject, @unchecked Sendable {
     /**
      Asserts the value of attribute `keyword` to be the provided `value`.
 

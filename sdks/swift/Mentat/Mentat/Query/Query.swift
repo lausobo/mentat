@@ -13,11 +13,13 @@ import MentatStore
 
 
 /**
- This class allows you to construct a query, bind values to variables and run those queries against a mentat DB.
+ This class allows you to construct a query, bind values to variables and run those queries against a Mentat DB.
 
  This class cannot be created directly, but must be created through `Mentat.query(String:)`.
 
- The types of values you can bind are
+ ## Binding Values
+
+ The types of values you can bind are:
  - `Int64`
  - `Entid`
  - `Keyword`
@@ -25,75 +27,71 @@ import MentatStore
  - `Double`
  - `Date`
  - `String`
- - `UUID`.
+ - `UUID`
 
  Each bound variable must have a corresponding value in the query string used to create this query.
 
- ```
+ ## Basic Usage (async/await)
+
+ ```swift
  let query = """
-            [:find ?name ?cat
-             :in ?type
-             :where
-             [?c :community/name ?name]
-             [?c :community/type ?type]
-             [?c :community/category ?cat]]
-            """
- mentat.query(query: query)
-        .bind(varName: "?type", toKeyword: ":community.type/website")
-        .run { result in
-             ...
-         }
+     [:find ?name ?cat
+      :in ?type
+      :where
+      [?c :community/name ?name]
+      [?c :community/type ?type]
+      [?c :community/category ?cat]]
+     """
+
+ let result = try await mentat.query(query: query)
+     .bind(varName: "?type", toKeyword: ":community.type/website")
+     .run()
+
+ for row in result ?? [] {
+     let name = row.asString(index: 0)
+     let category = row.asString(index: 1)
+     print("\(name): \(category)")
+ }
  ```
 
- Queries can be run and the results returned in a number of different formats. Individual result values are returned as `TypedValues` and
- the format differences relate to the number and structure of those values. The result format is related to the format provided in the query string.
+ ## Result Formats
 
- - `Rel` - This is the default `run` function and returns a list of rows of values. Queries that wish to have `Rel` results should format their query strings:
+ Queries can return results in different formats. Individual result values are returned as `TypedValue`s
+ and the format differences relate to the number and structure of those values.
+
+ ### Rel (default)
+ Returns a list of rows of values. Use `run()`:
+ ```swift
+ let query = "[:find ?a ?b ?c :where ...]"
+ let result = try await mentat.query(query: query).run()
  ```
- let query = """
-             [: find ?a ?b ?c
-              : where ... ]
-            """
- mentat.query(query: query)
-     .run { result in
-        ...
-     }
+
+ ### Scalar
+ Returns a single value (optional). Use `runScalar()`:
+ ```swift
+ let query = "[:find ?a . :where ...]"
+ let value = try await mentat.query(query: query).runScalar()
  ```
- - `Scalar` - This returns a single value as a result. This can be optional, as the value may not be present. Queries that wish to have `Scalar` results should format their query strings:
+
+ ### Coll
+ Returns a list of single values. Use `runColl()`:
+ ```swift
+ let query = "[:find [?a ...] :where ...]"
+ let values = try await mentat.query(query: query).runColl()
  ```
- let query = """
-             [: find ?a .
-              : where ... ]
-             """
- mentat.query(query: query)
-     .runScalar { result in
-        ...
-     }
+
+ ### Tuple
+ Returns a single row of values. Use `runTuple()`:
+ ```swift
+ let query = "[:find [?a ?b ?c] :where ...]"
+ let tuple = try await mentat.query(query: query).runTuple()
  ```
- - `Coll` - This returns a list of single values as a result.  Queries that wish to have `Coll` results should format their query strings:
- ```
- let query = """
-             [: find [?a ...]
-              : where ... ]
-             """
- mentat.query(query: query)
-         .runColl { result in
-            ...
-         }
- ```
- - `Tuple` - This returns a single row of values.  Queries that wish to have `Tuple` results should format their query strings:
- ```
- let query = """
-             [: find [?a ?b ?c]
-              : where ... ]
-            """
- mentat.query(query: query)
-     .runTuple { result in
-        ...
-     }
- ```
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
-open class Query: OptionalRustObject {
+open class Query: OptionalRustObject, @unchecked Sendable {
 
     /**
      Binds a `Int64` value to the provided variable name.
@@ -243,7 +241,10 @@ open class Query: OptionalRustObject {
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, or that
      variable we incorrectly bound, or that the query provided was not `Rel`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
+
+     - Note: This method is deprecated. Use the async version `run() async throws` instead.
      */
+    @available(*, deprecated, message: "Use async run() instead")
     open func run(callback: @escaping (RelResult?) -> Void) throws {
         var error = RustError(message: nil)
         let result = query_builder_execute(try! self.validPointer(), &error);
@@ -260,7 +261,10 @@ open class Query: OptionalRustObject {
         callback(RelResult(raw: results))
     }
 
-    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    /// Execute the query asynchronously and return the results as a list of rows.
+    ///
+    /// - Returns: A `RelResult` containing the query results, or `nil` if no results.
+    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
     open func run() async throws -> RelResult? {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RelResult?, Error>) in
             do {
@@ -281,7 +285,10 @@ open class Query: OptionalRustObject {
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
      variable we incorrectly bound, or that the query provided was not `Scalar`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
+
+     - Note: This method is deprecated. Use the async version `runScalar() async throws` instead.
      */
+    @available(*, deprecated, message: "Use async runScalar() instead")
     open func runScalar(callback: @escaping (TypedValue?) -> Void) throws {
         var error = RustError(message: nil)
         let result = query_builder_execute_scalar(try! self.validPointer(), &error)
@@ -298,7 +305,10 @@ open class Query: OptionalRustObject {
         callback(TypedValue(raw: results))
     }
 
-    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    /// Execute the query asynchronously and return a single scalar value.
+    ///
+    /// - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
+    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
     open func runScalar() async throws -> TypedValue? {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TypedValue?, Error>) in
             do {
@@ -320,7 +330,10 @@ open class Query: OptionalRustObject {
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
      variable we incorrectly bound, or that the query provided was not `Coll`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
+
+     - Note: This method is deprecated. Use the async version `runColl() async throws` instead.
      */
+    @available(*, deprecated, message: "Use async runColl() instead")
     open func runColl(callback: @escaping (ColResult?) -> Void) throws {
         var error = RustError(message: nil)
         let result = query_builder_execute_coll(try! self.validPointer(), &error)
@@ -337,7 +350,10 @@ open class Query: OptionalRustObject {
         callback(ColResult(raw: results))
     }
 
-    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    /// Execute the query asynchronously and return a collection of single values.
+    ///
+    /// - Returns: A `ColResult` containing the collection results, or `nil` if no results.
+    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
     open func runColl() async throws -> ColResult? {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ColResult?, Error>) in
             do {
@@ -358,7 +374,10 @@ open class Query: OptionalRustObject {
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
      variable we incorrectly bound, or that the query provided was not `Tuple`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
+
+     - Note: This method is deprecated. Use the async version `runTuple() async throws` instead.
      */
+    @available(*, deprecated, message: "Use async runTuple() instead")
     open func runTuple(callback: @escaping (TupleResult?) -> Void) throws {
         var error = RustError(message: nil)
         let result = query_builder_execute_tuple(try! self.validPointer(), &error)
@@ -375,7 +394,10 @@ open class Query: OptionalRustObject {
         callback(TupleResult(raw: results))
     }
 
-    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    /// Execute the query asynchronously and return a single tuple of values.
+    ///
+    /// - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
+    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
     open func runTuple() async throws -> TupleResult? {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TupleResult?, Error>) in
             do {
