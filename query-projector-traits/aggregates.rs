@@ -32,7 +32,7 @@ use mentat_query_sql::{
     ProjectedColumn,
 };
 
-use errors::{
+use crate::errors::{
     ProjectorError,
     Result,
 };

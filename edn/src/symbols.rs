@@ -14,7 +14,7 @@ use std::fmt::{
     Write,
 };
 
-use namespaceable_name::NamespaceableName;
+use crate::namespaceable_name::NamespaceableName;
 
 #[macro_export]
 macro_rules! ns_keyword {

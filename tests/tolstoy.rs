@@ -224,14 +224,11 @@ mod tolstoy_tests {
     macro_rules! assert_transactions {
         ($sqlite:expr, $conn:expr, $($tx:expr),+) => {
             let txs = txs_after(&$sqlite, &$conn.current_schema(), TX0);
-
-            let mut index = 1;
-            $(
-                assert_matches!(parts_to_datoms(&$conn.current_schema(), &txs[index].parts), $tx);
-                index = index + 1;
-            )*
-
-            assert_eq!(index, txs.len());
+            let expected: Vec<&str> = vec![$($tx),+];
+            for (index, tx) in expected.iter().enumerate() {
+                assert_matches!(parts_to_datoms(&$conn.current_schema(), &txs[index + 1].parts), *tx);
+            }
+            assert_eq!(expected.len() + 1, txs.len());
         };
 
         ($sqlite:expr, $conn:expr, schema => $schema:expr, $($tx:expr),*) => {
@@ -239,14 +236,11 @@ mod tolstoy_tests {
 
             // Schema assumed to be first transaction.
             assert_matches!(parts_to_datoms(&$conn.current_schema(), &txs[0].parts), $schema);
-
-            let mut index = 1;
-            $(
-                assert_matches!(parts_to_datoms(&$conn.current_schema(), &txs[index].parts), $tx);
-                index = index + 1;
-            )*
-
-            assert_eq!(index, txs.len());
+            let expected: Vec<&str> = vec![$($tx),*];
+            for (index, tx) in expected.iter().enumerate() {
+                assert_matches!(parts_to_datoms(&$conn.current_schema(), &txs[index + 1].parts), *tx);
+            }
+            assert_eq!(expected.len() + 1, txs.len());
         };
     }
 

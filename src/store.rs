@@ -46,9 +46,7 @@ use mentat_transaction::{
     Queryable,
 };
 
-use conn::{
-    Conn,
-};
+use crate::conn::Conn;
 
 use public_traits::errors::{
     Result,
@@ -69,9 +67,7 @@ use mentat_tolstoy::{
 };
 
 #[cfg(feature = "syncable")]
-use sync::{
-    Syncable,
-};
+use crate::sync::Syncable;
 
 /// A convenience wrapper around a single SQLite connection and a Conn. This is suitable
 /// for applications that don't require complex connection management.
@@ -83,7 +79,7 @@ pub struct Store {
 impl Store {
     /// Open a store at the supplied path, ensuring that it includes the bootstrap schema.
     pub fn open(path: &str) -> Result<Store> {
-        let mut connection = ::new_connection(path)?;
+        let mut connection = crate::new_connection(path)?;
         let conn = Conn::connect(&mut connection)?;
         Ok(Store {
             conn: conn,
@@ -205,7 +201,7 @@ impl Queryable for Store {
         self.conn.q_once(&self.sqlite, query, inputs)
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
         where T: Into<Option<QueryInputs>> {
         self.conn.q_prepare(&self.sqlite, query, inputs)
     }
@@ -284,11 +280,11 @@ mod tests {
         PreparedQuery,
     };
 
-    use ::{
+    use crate::{
         QueryInputs,
     };
 
-    use ::vocabulary::{
+    use crate::vocabulary::{
         AttributeBuilder,
         Definition,
         VersionedStore,

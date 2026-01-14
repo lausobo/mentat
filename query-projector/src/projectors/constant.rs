@@ -10,7 +10,7 @@
 
 use std::rc::Rc;
 
-use ::{
+use crate::{
     Element,
     FindSpec,
     QueryOutput,
@@ -32,11 +32,11 @@ use super::{
 /// Takes a boxed function that should return an empty result set of the desired type.
 pub struct ConstantProjector {
     spec: Rc<FindSpec>,
-    results_factory: Box<Fn() -> QueryResults>,
+    results_factory: Box<dyn Fn() -> QueryResults>,
 }
 
 impl ConstantProjector {
-    pub fn new(spec: Rc<FindSpec>, results_factory: Box<Fn() -> QueryResults>) -> ConstantProjector {
+    pub fn new(spec: Rc<FindSpec>, results_factory: Box<dyn Fn() -> QueryResults>) -> ConstantProjector {
         ConstantProjector {
             spec: spec,
             results_factory: results_factory,
@@ -60,7 +60,7 @@ impl Projector for ConstantProjector {
         self.project_without_rows()
     }
 
-    fn columns<'s>(&'s self) -> Box<Iterator<Item=&Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item=&'s Element> + 's> {
         self.spec.columns()
     }
 }

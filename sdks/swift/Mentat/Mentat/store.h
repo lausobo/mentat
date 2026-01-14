@@ -63,7 +63,7 @@ typedef struct TxChangeList TxChangeList;
    using `rust_c_string_destroy`).
 */
 struct RustError {
-    char *message;
+    char * _Nullable message;
 };
 
 /*
@@ -244,4 +244,5 @@ uuid_t* _Nonnull value_at_index_into_uuid(struct QueryResultRow* _Nonnull row, c
 const struct TxChange* _Nonnull tx_change_list_entry_at(const struct TxChangeList* _Nonnull list, size_t index);
 
 #endif /* store_h */
+
 

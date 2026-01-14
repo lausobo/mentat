@@ -1,5 +1,5 @@
 # UNMAINTAINED Project Mentat
-[![Build Status](https://travis-ci.org/mozilla/mentat.svg?branch=master)](https://travis-ci.org/mozilla/mentat)
+[![CI](https://github.com/mozilla/mentat/actions/workflows/ci.yml/badge.svg)](https://github.com/mozilla/mentat/actions/workflows/ci.yml)
 
 **Project Mentat is [no longer being developed or actively maintained by Mozilla](https://mail.mozilla.org/pipermail/firefox-dev/2018-September/006780.html).**  This repository will be marked read-only in the near future.  You are, of course, welcome to fork the repository and use the existing code.
 

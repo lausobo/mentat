@@ -24,11 +24,11 @@ use num::BigInt;
 use ordered_float::OrderedFloat;
 use uuid::Uuid;
 
-use entities::*;
-use query;
-use query::FromValue;
-use symbols::*;
-use types::{SpannedValue, Span, ValueAndSpan};
+use crate::entities::*;
+use crate::query;
+use crate::query::FromValue;
+use crate::symbols::*;
+use crate::types::{SpannedValue, Span, ValueAndSpan};
 
 // Goal: Be able to parse https://github.com/edn-format/edn
 // Also extensible to help parse http://docs.datomic.com/query.html
@@ -117,7 +117,7 @@ inst_micros -> DateTime<Utc> =
         let micros = d.parse::<i64>().unwrap();
         let seconds: i64 = micros / 1000000;
         let nanos: u32 = ((micros % 1000000).abs() as u32) * 1000;
-        Utc.timestamp(seconds, nanos)
+        Utc.timestamp_opt(seconds, nanos).single().unwrap()
     }
 
 inst_millis -> DateTime<Utc> =
@@ -125,7 +125,7 @@ inst_millis -> DateTime<Utc> =
         let millis = d.parse::<i64>().unwrap();
         let seconds: i64 = millis / 1000;
         let nanos: u32 = ((millis % 1000).abs() as u32) * 1000000;
-        Utc.timestamp(seconds, nanos)
+        Utc.timestamp_opt(seconds, nanos).single().unwrap()
     }
 
 inst -> SpannedValue = t:(inst_millis / inst_micros / inst_string)

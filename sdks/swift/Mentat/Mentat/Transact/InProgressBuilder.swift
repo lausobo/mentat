@@ -58,7 +58,7 @@ import MentatStore
  }
  ```
  */
-open class InProgressBuilder: OptionalRustObject {
+open class InProgressBuilder: OptionalRustObject, @unchecked Sendable {
 
     /**
      Asserts the value of attribute `keyword` to be the provided `value` for entity `entid`.
@@ -405,5 +405,16 @@ open class InProgressBuilder: OptionalRustObject {
 
     override open func cleanup(pointer: OpaquePointer) {
         in_progress_builder_destroy(pointer)
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<InProgressBuilder pointer=\(pointer)>"
+        } else {
+            return "<InProgressBuilder pointer=nil (transacted/committed)>"
+        }
     }
 }

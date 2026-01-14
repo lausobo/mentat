@@ -1,14 +1,14 @@
 [package]
 name = "mentat_transaction"
 version = "0.0.1"
+edition = "2024"
 workspace = ".."
 
 [features]
 sqlcipher = ["rusqlite/sqlcipher"]
 
 [dependencies]
-failure = "0.1.1"
-
+anyhow = "1"
 [dependencies.edn]
 path = "../edn"
 
@@ -43,5 +43,5 @@ path = "../query-pull"
 path = "../query-sql"
 
 [dependencies.rusqlite]
-version = "0.13"
+version = "0.38.0"
 features = ["limits"]

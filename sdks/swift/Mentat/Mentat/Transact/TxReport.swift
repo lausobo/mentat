@@ -29,7 +29,7 @@ import MentatStore
  let aEntid = report.entid(forTempId: "a")
  ```
  */
-open class TxReport: RustObject {
+open class TxReport: RustObject, @unchecked Sendable {
 
     // The identifier for the transaction.
     open var txId: Entid {
@@ -59,5 +59,12 @@ open class TxReport: RustObject {
 
     override open func cleanup(pointer: OpaquePointer) {
         tx_report_destroy(pointer)
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        let pointer = String(format: "%p", Int(bitPattern: raw))
+        return "<TxReport pointer=\(pointer) txId=\(txId) txInstant=\(txInstant)>"
     }
 }

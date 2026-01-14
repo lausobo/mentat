@@ -24,14 +24,14 @@ use edn::query::{
     PlainSymbol,
 };
 
-use clauses::ConjoiningClauses;
+use crate::clauses::ConjoiningClauses;
 
 use query_algebrizer_traits::errors::{
     AlgebrizerError,
     Result,
 };
 
-use types::{
+use crate::types::{
     EmptyBecause,
     QueryValue,
 };

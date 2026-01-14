@@ -14,14 +14,12 @@ use std::path::{
     PathBuf,
 };
 
-#[macro_use] extern crate failure_derive;
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
 
 extern crate combine;
 extern crate env_logger;
 extern crate dirs;
-extern crate failure;
 extern crate getopts;
 extern crate linefeed;
 extern crate rusqlite;
@@ -36,6 +34,7 @@ extern crate core_traits;
 extern crate mentat_db;
 
 use getopts::Options;
+use thiserror::Error;
 
 use termion::{
     color,
@@ -48,7 +47,7 @@ static HISTORY_FILE_PATH: &str = ".mentat_history";
 /// node_repl, python, and sqlite, at least.
 pub(crate) fn history_file_path() -> PathBuf {
     let mut p = dirs::home_dir().unwrap_or_default();
-    p.push(::HISTORY_FILE_PATH);
+    p.push(HISTORY_FILE_PATH);
     p
 }
 
@@ -59,9 +58,9 @@ pub mod command_parser;
 pub mod input;
 pub mod repl;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum CliError {
-    #[fail(display = "{}", _0)]
+    #[error("{0}")]
     CommandParse(String),
 }
 

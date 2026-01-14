@@ -14,19 +14,19 @@ use edn::query::{
     UnifyVars,
 };
 
-use clauses::ConjoiningClauses;
+use crate::clauses::ConjoiningClauses;
 
 use query_algebrizer_traits::errors::{
     AlgebrizerError,
     Result,
 };
 
-use types::{
+use crate::types::{
     ColumnConstraint,
     ComputedTable,
 };
 
-use Known;
+use crate::Known;
 
 impl ConjoiningClauses {
     pub(crate) fn apply_not_join(&mut self, known: Known, not_join: NotJoin) -> Result<()> {
@@ -107,7 +107,7 @@ mod testing {
         Variable
     };
 
-    use clauses::{
+    use crate::clauses::{
         QueryInputs,
         add_attribute,
         associate_ident,
@@ -117,7 +117,7 @@ mod testing {
         AlgebrizerError,
     };
 
-    use types::{
+    use crate::types::{
         ColumnAlternation,
         ColumnConstraint,
         ColumnConstraintOrAlternation,
@@ -130,7 +130,7 @@ mod testing {
         SourceAlias,
     };
 
-    use {
+    use crate::{
         algebrize,
         algebrize_with_inputs,
         parse_find_string,

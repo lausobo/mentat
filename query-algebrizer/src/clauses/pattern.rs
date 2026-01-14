@@ -29,11 +29,11 @@ use edn::query::{
     Variable,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
 };
 
-use types::{
+use crate::types::{
     ColumnConstraint,
     DatomsColumn,
     EmptyBecause,
@@ -44,7 +44,7 @@ use types::{
     SourceAlias,
 };
 
-use Known;
+use crate::Known;
 
 pub fn into_typed_value(nic: NonIntegerConstant) -> TypedValue {
     match nic {
@@ -675,14 +675,14 @@ mod testing {
         Variable,
     };
 
-    use clauses::{
+    use crate::clauses::{
         QueryInputs,
         add_attribute,
         associate_ident,
         ident,
     };
 
-    use types::{
+    use crate::types::{
         Column,
         ColumnConstraint,
         DatomsTable,
@@ -691,7 +691,7 @@ mod testing {
         SourceAlias,
     };
 
-    use {
+    use crate::{
         algebrize,
         parse_find_string,
     };

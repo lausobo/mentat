@@ -31,7 +31,7 @@ pub mod strings {
 
     pub fn kw_from_string(keyword_string: &'static str) -> Keyword {
         // TODO: validate. The input might not be a keyword!
-        let attr_name = keyword_string.trim_left_matches(":");
+        let attr_name = keyword_string.trim_start_matches(":");
         let parts: Vec<&str> = attr_name.split("/").collect();
         Keyword::namespaced(parts[0], parts[1])
     }
@@ -154,4 +154,3 @@ pub mod error {
         translate_result(result, error);
     }
 }
-

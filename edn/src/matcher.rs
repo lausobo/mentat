@@ -12,8 +12,8 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use itertools::diff_with;
 
-use symbols;
-use types::Value;
+use crate::symbols;
+use crate::types::Value;
 
 /// A trait defining pattern matching rules for any given pattern of type `T`.
 trait PatternMatchingRules<'a, T> {
@@ -21,7 +21,7 @@ trait PatternMatchingRules<'a, T> {
     fn matches_any(pattern: &T) -> bool;
 
     /// Return the placeholder name if the given pattern matches a placeholder.
-    fn matches_placeholder(pattern: &'a T) -> Option<(&'a String)>;
+    fn matches_placeholder(pattern: &'a T) -> Option<&'a String>;
 }
 
 /// A default type implementing `PatternMatchingRules` specialized on
@@ -38,7 +38,7 @@ impl<'a> PatternMatchingRules<'a, Value> for DefaultPatternMatchingRules {
         }
     }
 
-    fn matches_placeholder(pattern: &'a Value) -> Option<(&'a String)> {
+    fn matches_placeholder(pattern: &'a Value) -> Option<&'a String> {
         match *pattern {
             Value::PlainSymbol(symbols::PlainSymbol(ref s)) => if s.starts_with('?') { Some(s) } else { None },
             _ => None
@@ -114,7 +114,7 @@ impl Value {
 
 #[cfg(test)]
 mod test {
-    use parse;
+    use crate::parse;
 
     macro_rules! assert_match {
         ( $pattern:tt, $value:tt, $expected:expr ) => {

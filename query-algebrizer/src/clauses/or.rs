@@ -29,7 +29,7 @@ use edn::query::{
     WhereClause,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
     PushComputed,
 };
@@ -38,7 +38,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     ColumnConstraintOrAlternation,
     ColumnAlternation,
     ColumnIntersection,
@@ -52,7 +52,7 @@ use types::{
     VariableColumn,
 };
 
-use Known;
+use crate::Known;
 
 /// Return true if both left and right are the same variable or both are non-variable.
 fn _simply_matches_place(left: &PatternNonValuePlace, right: &PatternNonValuePlace) -> bool {
@@ -768,12 +768,12 @@ mod testing {
         Variable,
     };
 
-    use clauses::{
+    use crate::clauses::{
         add_attribute,
         associate_ident,
     };
 
-    use types::{
+    use crate::types::{
         ColumnConstraint,
         DatomsColumn,
         DatomsTable,
@@ -783,7 +783,7 @@ mod testing {
         SourceAlias,
     };
 
-    use {
+    use crate::{
         algebrize,
         algebrize_with_counter,
         parse_find_string,

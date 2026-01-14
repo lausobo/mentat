@@ -71,6 +71,7 @@ build.xcarchive
 *.perspectivev3
 !default.perspectivev3
 /sdks/swift/Mentat/*.xcodeproj/project.xcworkspace/xcuserdata
+/sdks/swift/**/xcuserdata
 
 ## Other
 *.xccheckout

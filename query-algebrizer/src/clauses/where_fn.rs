@@ -12,7 +12,7 @@ use edn::query::{
     WhereFn,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
 };
 
@@ -21,7 +21,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use Known;
+use crate::Known;
 
 /// Application of `where` functions.
 impl ConjoiningClauses {

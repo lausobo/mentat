@@ -251,7 +251,7 @@ fn test_unbound_inputs() {
 fn test_instants_and_uuids() {
     // We assume, perhaps foolishly, that the clocks on test machines won't lose more than an
     // hour while this test is running.
-    let start = Utc::now() + FixedOffset::west(60 * 60);
+    let start = Utc::now() + FixedOffset::west_opt(60 * 60).expect("fixed offset");
 
     let mut c = new_connection("").expect("Couldn't open conn.");
     let mut conn = Conn::connect(&mut c).expect("Couldn't open DB.");
@@ -737,7 +737,7 @@ fn test_type_reqs() {
         v => {
             panic!("Query returned unexpected type: {:?}", v);
         }
-    };
+    }
 }
 
 #[test]
@@ -783,7 +783,7 @@ fn test_monster_head_aggregates() {
             assert_eq!(count, 4);
         },
         r => panic!("Unexpected result {:?}", r),
-    };
+    }
 
     // With :with, uniqueness includes the monster, so we get 1 + 1 + 1 + 3 = 6.
     let res = in_progress.q_once("[:find (sum ?heads) . :with ?monster :where [?monster :monster/heads ?heads]]", None)
@@ -794,7 +794,7 @@ fn test_monster_head_aggregates() {
             assert_eq!(count, 6);
         },
         r => panic!("Unexpected result {:?}", r),
-    };
+    }
 
     // Aggregates group.
     let res = in_progress.q_once(r#"[:find ?name (count ?weapon)
@@ -816,7 +816,7 @@ fn test_monster_head_aggregates() {
             assert_eq!(vals, expected.into());
         },
         r => panic!("Unexpected result {:?}", r),
-    };
+    }
 
     in_progress.rollback().expect("rolled back");
 }
@@ -1508,7 +1508,7 @@ fn run_tx_data_test(mut store: Store) {
             },
             x => panic!("Got unexpected results {:?}", x),
         }
-    };
+    }
 
     assert_tx_data(&store, &tx1, "1".into());
     assert_tx_data(&store, &tx2, "2".into());
@@ -1519,7 +1519,7 @@ fn test_tx_data() {
     run_tx_data_test(Store::open("").expect("opened"));
 }
 
-#[cfg(feature = "sqlite")]
+#[cfg(feature = "sqlcipher")]
 #[test]
 fn test_encrypted() {
     // We expect this to blow up completely if something is wrong with the encryption,

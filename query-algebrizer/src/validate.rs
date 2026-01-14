@@ -108,11 +108,11 @@ mod tests {
         WhereClause,
     };
 
-    use clauses::ident;
+    use crate::clauses::ident;
 
     use super::*;
-    use parse_find_string;
-    use types::{
+    use crate::parse_find_string;
+    use crate::types::{
         FindQuery,
     };
 

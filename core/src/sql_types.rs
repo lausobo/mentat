@@ -17,9 +17,7 @@ use core_traits::{
     ValueTypeSet,
 };
 
-use types::{
-    ValueTypeTag,
-};
+use crate::types::ValueTypeTag;
 
 /// Type safe representation of the possible return values from SQLite's `typeof`
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
@@ -133,9 +131,7 @@ mod tests {
     use core_traits::{
         ValueType,
     };
-    use sql_types::{
-        SQLValueType,
-    };
+    use crate::sql_types::SQLValueType;
 
     #[test]
     fn test_accommodates_integer() {

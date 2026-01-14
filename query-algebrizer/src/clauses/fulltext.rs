@@ -28,7 +28,7 @@ use edn::query::{
     WhereFn,
 };
 
-use clauses::{
+use crate::clauses::{
     ConjoiningClauses,
 };
 
@@ -38,7 +38,7 @@ use query_algebrizer_traits::errors::{
     Result,
 };
 
-use types::{
+use crate::types::{
     Column,
     ColumnConstraint,
     DatomsColumn,
@@ -50,7 +50,7 @@ use types::{
     SourceAlias,
 };
 
-use Known;
+use crate::Known;
 
 impl ConjoiningClauses {
     #[allow(unused_variables)]
@@ -281,7 +281,7 @@ mod testing {
         Variable,
     };
 
-    use clauses::{
+    use crate::clauses::{
         add_attribute,
         associate_ident,
     };

@@ -26,7 +26,7 @@ use mentat_core::{
     Utc,
 };
 
-use ::{
+use crate::{
     HasSchema,
     Queryable,
     QueryInputs,
@@ -49,7 +49,7 @@ pub struct QueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilder<'a> {
-    pub fn new<T>(store: &'a mut Store, query: T) -> QueryBuilder where T: Into<String> {
+    pub fn new<T>(store: &'a mut Store, query: T) -> QueryBuilder<'a> where T: Into<String> {
         QueryBuilder { query: query.into(), values: BTreeMap::new(), types: BTreeMap::new(), store }
     }
 
@@ -341,7 +341,7 @@ mod test {
             entid: i64,
             boolean: bool,
             long_val: i64,
-        };
+        }
 
         let mut results: Vec<Res> = QueryBuilder::new(&mut store, r#"[:find ?x ?v ?i
                                                                       :where [?x :foo/boolean ?v]

@@ -13,21 +13,41 @@ import MentatStore
 
 /**
  Wraps a `Tuple` result from a Mentat query.
- A `Tuple` result is a list of `TypedValues`.
- Individual values can be fetched as `TypedValues` or converted into a requested type.
+
+ A `Tuple` result is a single row of `TypedValue`s.
+ Individual values can be fetched as `TypedValue`s or converted into a requested type.
+
+ ## Usage
+
+ ```swift
+ let query = "[:find [?name ?age] :where [?e :user/name ?name] [?e :user/age ?age]]"
+ let tuple = try await mentat.query(query: query).runTuple()
+
+ if let result = tuple {
+     let name = result.asString(index: 0)
+     let age = result.asLong(index: 1)
+     print("\(name) is \(age) years old")
+ }
+ ```
+
+ ## Supported Types
 
  Values can be fetched as one of the following types:
- - `TypedValue`
- - `Int64`
- - `Entid`
- - `Keyword`
- - `Bool`
- - `Double`
- - `Date`
- - `String`
- - `UUID`.
+ - `TypedValue` - via `get(index:)`
+ - `Int64` - via `asLong(index:)`
+ - `Entid` - via `asEntid(index:)`
+ - `Keyword` - via `asKeyword(index:)`
+ - `Bool` - via `asBool(index:)`
+ - `Double` - via `asDouble(index:)`
+ - `Date` - via `asDate(index:)`
+ - `String` - via `asString(index:)`
+ - `UUID` - via `asUUID(index:)`
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
-open class TupleResult: OptionalRustObject {
+open class TupleResult: OptionalRustObject, @unchecked Sendable {
 
     /**
      Return the `TypedValue` at the specified index.
@@ -151,42 +171,88 @@ open class TupleResult: OptionalRustObject {
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_list_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<TupleResult pointer=\(pointer)>"
+        } else {
+            return "<TupleResult pointer=nil (consumed)>"
+        }
+    }
 }
 
 /**
  Wraps a `Coll` result from a Mentat query.
- A `Coll` result is a list of rows of single values of type `TypedValue`.
- Values for individual rows can be fetched as `TypedValue` or converted into a requested type.
 
- Row values can be fetched as one of the following types:
- - `TypedValue`
- - `Int64`
- - `Entid`
- - `Keyword`
- - `Bool`
- - `Double`
- - `Date`
- - `String`
- - `UUID`.
+ A `Coll` result is a collection of single values of type `TypedValue`.
+ Values can be fetched by index or iterated over.
+
+ ## Usage
+
+ ```swift
+ let query = "[:find [?name ...] :where [?e :user/name ?name]]"
+ let coll = try await mentat.query(query: query).runColl()
+
+ // Iterate over values
+ for value in coll ?? [] {
+     print(value.asString())
+ }
+
+ // Or access by index
+ if let result = coll {
+     let firstName = result.asString(index: 0)
+ }
+ ```
+
+ ## Supported Types
+
+ Values can be fetched as one of the following types:
+ - `TypedValue` - via `get(index:)`
+ - `Int64` - via `asLong(index:)`
+ - `Entid` - via `asEntid(index:)`
+ - `Keyword` - via `asKeyword(index:)`
+ - `Bool` - via `asBool(index:)`
+ - `Double` - via `asDouble(index:)`
+ - `Date` - via `asDate(index:)`
+ - `String` - via `asString(index:)`
+ - `UUID` - via `asUUID(index:)`
+
+ ## Thread Safety
+
+ This class conforms to `Sendable` and can be safely used across actor boundaries.
  */
-open class ColResult: TupleResult {
+open class ColResult: TupleResult, @unchecked Sendable {
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<ColResult pointer=\(pointer)>"
+        } else {
+            return "<ColResult pointer=nil (iterated)>"
+        }
+    }
 }
 
 /**
  Iterator for `ColResult`.
 
- To iterate over the result set use standard iteration flows.
- ```
- query.runColl { rows in
-     rows.forEach { value in
-        ...
-     }
+ To iterate over the result set use standard Swift iteration:
+
+ ```swift
+ let coll = try await mentat.query(query: query).runColl()
+ for value in coll ?? [] {
+     print(value.asString())
  }
  ```
 
- Note that iteration is consuming and can only be done once.
+ - Note: Iteration is consuming and can only be done once.
  */
-open class ColResultIterator: OptionalRustObject, IteratorProtocol  {
+open class ColResultIterator: OptionalRustObject, IteratorProtocol, @unchecked Sendable {
     public typealias Element = TypedValue
 
     init(iter: OpaquePointer?) {
@@ -204,10 +270,21 @@ open class ColResultIterator: OptionalRustObject, IteratorProtocol  {
     override open func cleanup(pointer: OpaquePointer) {
         typed_value_list_iter_destroy(pointer)
     }
+
+    // MARK: - CustomDebugStringConvertible
+
+    override open var debugDescription: String {
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<ColResultIterator pointer=\(pointer)>"
+        } else {
+            return "<ColResultIterator pointer=nil (exhausted)>"
+        }
+    }
 }
 
 extension ColResult: Sequence {
-    open func makeIterator() -> ColResultIterator {
+    public func makeIterator() -> ColResultIterator {
         defer {
             self.raw = nil
         }
@@ -216,5 +293,75 @@ extension ColResult: Sequence {
         }
         let rowIter = typed_value_list_into_iter(raw)
         return ColResultIterator(iter: rowIter)
+    }
+}
+
+// MARK: - AsyncSequence Conformance
+
+/**
+ Async iterator for `ColResult`.
+
+ Enables async iteration over collection results using `for await`:
+
+ ```swift
+ let result = try await mentat.query(query: query).runColl()
+ if let values = result {
+     for await value in values.async {
+         print(value.asString())
+     }
+ }
+ ```
+ */
+public struct AsyncColResultIterator: AsyncIteratorProtocol {
+    public typealias Element = TypedValue
+
+    private var iterator: ColResultIterator
+
+    init(iterator: ColResultIterator) {
+        self.iterator = iterator
+    }
+
+    public mutating func next() async -> Element? {
+        return iterator.next()
+    }
+}
+
+/**
+ Async sequence wrapper for `ColResult`.
+
+ Access via the `.async` property on `ColResult`:
+
+ ```swift
+ for await value in result.async {
+     print(value.asString())
+ }
+ ```
+ */
+public struct AsyncColResultSequence: AsyncSequence, Sendable {
+    public typealias Element = TypedValue
+    public typealias AsyncIterator = AsyncColResultIterator
+
+    private let result: ColResult
+
+    init(result: ColResult) {
+        self.result = result
+    }
+
+    public func makeAsyncIterator() -> AsyncColResultIterator {
+        return AsyncColResultIterator(iterator: result.makeIterator())
+    }
+}
+
+extension ColResult {
+    /// Returns an async sequence wrapper for iterating over values using `for await`.
+    ///
+    /// ```swift
+    /// let result = try await mentat.query(query: query).runColl()
+    /// for await value in result?.async ?? AsyncColResultSequence(result: ColResult(raw: nil)) {
+    ///     print(value.asString())
+    /// }
+    /// ```
+    public var async: AsyncColResultSequence {
+        return AsyncColResultSequence(result: self)
     }
 }

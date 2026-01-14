@@ -76,7 +76,7 @@ use mentat_core::{
     TxReport,
 };
 
-use ::InProgress;
+use crate::InProgress;
 
 use public_traits::errors::{
     Result,

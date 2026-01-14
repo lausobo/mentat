@@ -23,7 +23,7 @@ use tolstoy_traits::errors::{
     TolstoyError,
 };
 
-use types::{
+use crate::types::{
     LocalGlobalTxMapping,
 };
 
@@ -37,7 +37,8 @@ impl TxMapper {
         )?;
         for mapping in mappings.iter() {
             let uuid_bytes = mapping.remote.as_bytes().to_vec();
-            stmt.execute(&[&mapping.local, &uuid_bytes])?;
+            let params: [&dyn rusqlite::types::ToSql; 2] = [&mapping.local, &uuid_bytes];
+            stmt.execute(params)?;
         }
         Ok(())
     }
@@ -53,7 +54,8 @@ impl TxMapper {
             None => {
                 let uuid = Uuid::new_v4();
                 let uuid_bytes = uuid.as_bytes().to_vec();
-                db_tx.execute("INSERT INTO tolstoy_tu (tx, uuid) VALUES (?, ?)", &[&tx, &uuid_bytes])?;
+                let params: [&dyn rusqlite::types::ToSql; 2] = [&tx, &uuid_bytes];
+                db_tx.execute("INSERT INTO tolstoy_tu (tx, uuid) VALUES (?, ?)", params)?;
                 return Ok(uuid);
             }
         }
@@ -65,7 +67,7 @@ impl TxMapper {
         )?;
 
         let uuid_bytes = uuid.as_bytes().to_vec();
-        let results = stmt.query_map(&[&uuid_bytes], |r| r.get(0))?;
+        let results = stmt.query_map([&uuid_bytes], |r| r.get(0))?;
 
         let mut txs = vec![];
         txs.extend(results);
@@ -82,9 +84,9 @@ impl TxMapper {
             "SELECT uuid FROM tolstoy_tu WHERE tx = ?"
         )?;
 
-        let results = stmt.query_and_then(&[&tx], |r| -> Result<Uuid>{
-            let bytes: Vec<u8> = r.get(0);
-            Uuid::from_bytes(bytes.as_slice()).map_err(|e| e.into())
+        let results = stmt.query_and_then([&tx], |r| -> Result<Uuid>{
+            let bytes: Vec<u8> = r.get(0)?;
+            Ok(Uuid::from_bytes(bytes.as_slice())?)
         })?;
 
         let mut uuids = vec![];
@@ -101,7 +103,7 @@ impl TxMapper {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use schema;
+    use crate::schema;
 
     #[test]
     fn test_getters() {

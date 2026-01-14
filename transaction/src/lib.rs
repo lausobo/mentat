@@ -8,7 +8,6 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-extern crate failure;
 extern crate rusqlite;
 
 extern crate edn;
@@ -162,7 +161,7 @@ pub trait Queryable {
         where T: Into<Option<QueryInputs>>;
     fn q_once<T>(&self, query: &str, inputs: T) -> Result<QueryOutput>
         where T: Into<Option<QueryInputs>>;
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
         where T: Into<Option<QueryInputs>>;
     fn lookup_values_for_attribute<E>(&self, entity: E, attribute: &edn::Keyword) -> Result<Vec<TypedValue>>
         where E: Into<Entid>;
@@ -322,17 +321,17 @@ impl<'a, 'c> InProgress<'a, 'c> {
     }
 
     pub fn savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("SAVEPOINT {}", name), &[])?;
+        self.transaction.execute(&format!("SAVEPOINT {}", name), [])?;
         Ok(())
     }
 
     pub fn rollback_savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("ROLLBACK TO {}", name), &[])?;
+        self.transaction.execute(&format!("ROLLBACK TO {}", name), [])?;
         Ok(())
     }
 
     pub fn release_savepoint(&self, name: &str) -> Result<()> {
-        self.transaction.execute(&format!("RELEASE {}", name), &[])?;
+        self.transaction.execute(&format!("RELEASE {}", name), [])?;
         Ok(())
     }
 }
@@ -350,7 +349,7 @@ impl<'a, 'c> Queryable for InProgressRead<'a, 'c> {
         self.in_progress.q_once(query, inputs)
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
         where T: Into<Option<QueryInputs>> {
         self.in_progress.q_prepare(query, inputs)
     }
@@ -402,7 +401,7 @@ impl<'a, 'c> Queryable for InProgress<'a, 'c> {
         }
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
         where T: Into<Option<QueryInputs>> {
 
         let known = Known::new(&self.schema, Some(&self.cache));

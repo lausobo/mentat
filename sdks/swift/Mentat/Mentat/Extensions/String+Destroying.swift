@@ -14,7 +14,7 @@ import MentatStore
 
 public extension String {
     /** Helper to construct a String from a Rust string without leaking it. */
-    public init(destroyingRustString rustCString: UnsafeMutablePointer<CChar>) {
+    init(destroyingRustString rustCString: UnsafeMutablePointer<CChar>) {
         defer { rust_c_string_destroy(rustCString); }
         self.init(cString: rustCString)
     }

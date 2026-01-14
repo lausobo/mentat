@@ -22,8 +22,12 @@ import MentatStore
  If a class does not override `cleanup` then a `fatalError` is thrown.
  The optional pointer is managed here such that is the pointer is nil, then the cleanup function is not called
  ensuring that we do not double free the pointer on exit.
+
+ This class is marked as `@unchecked Sendable` because:
+ - The underlying Rust objects are thread-safe
+ - Pointer management is handled atomically by Rust
  */
-open class OptionalRustObject: Destroyable {
+open class OptionalRustObject: Destroyable, CustomDebugStringConvertible, @unchecked Sendable {
     var raw: OpaquePointer?
     lazy var uniqueId: ObjectIdentifier = {
          ObjectIdentifier(self)
@@ -62,7 +66,18 @@ open class OptionalRustObject: Destroyable {
     }
 
     open func cleanup(pointer: OpaquePointer) {
-        fatalError("\(cleanup) is not implemented.")
+        fatalError("cleanup(pointer:) is not implemented.")
+    }
+
+    // MARK: - CustomDebugStringConvertible
+
+    open var debugDescription: String {
+        let typeName = String(describing: type(of: self))
+        if let raw = raw {
+            let pointer = String(format: "%p", Int(bitPattern: raw))
+            return "<\(typeName) pointer=\(pointer)>"
+        } else {
+            return "<\(typeName) pointer=nil (consumed)>"
+        }
     }
 }
-

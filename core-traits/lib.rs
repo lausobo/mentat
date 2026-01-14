@@ -136,9 +136,7 @@ pub enum AttributeBitFlags {
 }
 
 pub mod attribute {
-    use ::{
-        TypedValue,
-    };
+    use crate::TypedValue;
 
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
     pub enum Unique {
@@ -317,7 +315,7 @@ impl ::enum_set::CLike for ValueType {
     }
 
     unsafe fn from_u32(v: u32) -> ValueType {
-        ::std::mem::transmute(v)
+        unsafe { ::std::mem::transmute(v) }
     }
 }
 

@@ -49,7 +49,7 @@ use mentat_query_algebrizer::{
     VariableColumn,
 };
 
-use ::{
+use crate::{
     CombinedProjection,
     ConstantProjector,
     Projector,
@@ -254,7 +254,7 @@ pub enum ProjectedSelect {
     Constant(ConstantProjector),
     Query {
         query: SelectQuery,
-        projector: Box<Projector>,
+        projector: Box<dyn Projector>,
     },
 }
 

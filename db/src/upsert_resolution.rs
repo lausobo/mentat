@@ -25,10 +25,10 @@ use db_traits::errors::{
     DbErrorKind,
     Result,
 };
-use types::{
+use crate::types::{
     AVPair,
 };
-use internal_types::{
+use crate::internal_types::{
     Population,
     TempIdHandle,
     TempIdMap,
@@ -51,7 +51,7 @@ use mentat_core::{
     Schema,
 };
 use edn::entities::OpType;
-use schema::SchemaBuilding;
+use crate::schema::SchemaBuilding;
 
 /// A "Simple upsert" that looks like [:db/add TEMPID a v], where a is :db.unique/identity.
 #[derive(Clone,Debug,Eq,Hash,Ord,PartialOrd,PartialEq)]
