@@ -262,3 +262,73 @@ extension ColResult: Sequence {
         return ColResultIterator(iter: rowIter)
     }
 }
+
+// MARK: - AsyncSequence Conformance
+
+/**
+ Async iterator for `ColResult`.
+
+ Enables async iteration over collection results using `for await`:
+
+ ```swift
+ let result = try await mentat.query(query: query).runColl()
+ if let values = result {
+     for await value in values.async {
+         print(value.asString())
+     }
+ }
+ ```
+ */
+public struct AsyncColResultIterator: AsyncIteratorProtocol {
+    public typealias Element = TypedValue
+
+    private var iterator: ColResultIterator
+
+    init(iterator: ColResultIterator) {
+        self.iterator = iterator
+    }
+
+    public mutating func next() async -> Element? {
+        return iterator.next()
+    }
+}
+
+/**
+ Async sequence wrapper for `ColResult`.
+
+ Access via the `.async` property on `ColResult`:
+
+ ```swift
+ for await value in result.async {
+     print(value.asString())
+ }
+ ```
+ */
+public struct AsyncColResultSequence: AsyncSequence, Sendable {
+    public typealias Element = TypedValue
+    public typealias AsyncIterator = AsyncColResultIterator
+
+    private let result: ColResult
+
+    init(result: ColResult) {
+        self.result = result
+    }
+
+    public func makeAsyncIterator() -> AsyncColResultIterator {
+        return AsyncColResultIterator(iterator: result.makeIterator())
+    }
+}
+
+extension ColResult {
+    /// Returns an async sequence wrapper for iterating over values using `for await`.
+    ///
+    /// ```swift
+    /// let result = try await mentat.query(query: query).runColl()
+    /// for await value in result?.async ?? AsyncColResultSequence(result: ColResult(raw: nil)) {
+    ///     print(value.asString())
+    /// }
+    /// ```
+    public var async: AsyncColResultSequence {
+        return AsyncColResultSequence(result: self)
+    }
+}

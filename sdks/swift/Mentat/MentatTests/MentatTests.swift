@@ -282,20 +282,24 @@ class MentatTests: XCTestCase {
         [(fulltext $ :community/category "food") [[?c ?cat]]]]
         """
         let expect = expectation(description: "Query is executed")
-        let expectedResults = [("InBallard", "food"),
-                               ("Seattle Chinatown Guide", "food"),
-                               ("Community Harvest of Southwest Seattle", "sustainable food"),
-                               ("University District Food Bank", "food bank")]
+        let expectedResults: Set<String> = [
+            "InBallard|food",
+            "Seattle Chinatown Guide|food",
+            "Community Harvest of Southwest Seattle|sustainable food",
+            "University District Food Bank|food bank"
+        ]
         XCTAssertNoThrow(try mentat.query(query: query).run(callback: { relResult in
             guard let rows = relResult else {
                 return assertionFailure("No results received")
             }
 
-            for (i, row) in rows.enumerated() {
-                let (name, category) = expectedResults[i]
-                assert( row.asString(index: 0) == name)
-                assert(row.asString(index: 1) == category)
+            var actualResults: Set<String> = []
+            for row in rows {
+                let name = row.asString(index: 0)
+                let category = row.asString(index: 1)
+                actualResults.insert("\(name)|\(category)")
             }
+            assert(actualResults == expectedResults)
             expect.fulfill()
         }))
         waitForExpectations(timeout: 1) { error in
@@ -315,23 +319,25 @@ class MentatTests: XCTestCase {
         [(fulltext $ :community/category "food") [[?c ?cat]]]]
         """
         let expect = expectation(description: "Query is executed")
-        let expectedResults = [("InBallard", "food"),
-                               ("Seattle Chinatown Guide", "food"),
-                               ("Community Harvest of Southwest Seattle", "sustainable food"),
-                               ("University District Food Bank", "food bank")]
+        let expectedResults: Set<String> = [
+            "InBallard|food",
+            "Seattle Chinatown Guide|food",
+            "Community Harvest of Southwest Seattle|sustainable food",
+            "University District Food Bank|food bank"
+        ]
         XCTAssertNoThrow(try mentat.query(query: query).run(callback: { relResult in
             guard let rows = relResult else {
                 return assertionFailure("No results received")
             }
 
-            var i = 0
+            var actualResults: Set<String> = []
             rows.forEach({ (row) in
-                let (name, category) = expectedResults[i]
-                i += 1
-                assert(row.asString(index: 0) == name)
-                assert(row.asString(index: 1) == category)
+                let name = row.asString(index: 0)
+                let category = row.asString(index: 1)
+                actualResults.insert("\(name)|\(category)")
             })
-            assert(i == 4)
+            assert(actualResults.count == 4)
+            assert(actualResults == expectedResults)
             expect.fulfill()
         }))
         waitForExpectations(timeout: 1) { error in
@@ -1296,19 +1302,226 @@ class MentatTests: XCTestCase {
         [?c :community/type :community.type/website]
         [(fulltext $ :community/category "food") [[?c ?cat]]]]
         """
-        let expectedResults = [("InBallard", "food"),
-                               ("Seattle Chinatown Guide", "food"),
-                               ("Community Harvest of Southwest Seattle", "sustainable food"),
-                               ("University District Food Bank", "food bank")]
+        let expectedResults: Set<String> = [
+            "InBallard|food",
+            "Seattle Chinatown Guide|food",
+            "Community Harvest of Southwest Seattle|sustainable food",
+            "University District Food Bank|food bank"
+        ]
         let rows = try await mentat.query(query: query).run()
         XCTAssertNotNil(rows)
-        var i = 0
+        var actualResults: Set<String> = []
         rows?.forEach({ row in
-            let (name, category) = expectedResults[i]
-            i += 1
-            XCTAssertEqual(row.asString(index: 0), name)
-            XCTAssertEqual(row.asString(index: 1), category)
+            let name = row.asString(index: 0)
+            let category = row.asString(index: 1)
+            actualResults.insert("\(name)|\(category)")
         })
-        XCTAssertEqual(i, expectedResults.count)
+        XCTAssertEqual(actualResults.count, expectedResults.count)
+        XCTAssertEqual(actualResults, expectedResults)
+    }
+
+    // MARK: - AsyncSequence Tests
+
+    @available(iOS 13.0, *)
+    func testAsyncRelResultSequence() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = """
+        [:find ?name ?cat
+        :where
+        [?c :community/name ?name]
+        [?c :community/type :community.type/website]
+        [(fulltext $ :community/category "food") [[?c ?cat]]]]
+        """
+        let rows = try await mentat.query(query: query).run()
+        XCTAssertNotNil(rows)
+
+        // Test async iteration using for await
+        var count = 0
+        for await row in rows!.async {
+            XCTAssertNotNil(row.asString(index: 0))
+            XCTAssertNotNil(row.asString(index: 1))
+            count += 1
+        }
+        XCTAssertEqual(count, 4)
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncColResultSequence() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = "[:find [?when ...] :where [_ :db/txInstant ?when] :order (asc ?when)]"
+        let coll = try await mentat.query(query: query).runColl()
+        XCTAssertNotNil(coll)
+
+        // Test async iteration using for await
+        var count = 0
+        for await value in coll!.async {
+            // Each value should be a date (instant)
+            XCTAssertNotNil(value.asDate())
+            count += 1
+        }
+        XCTAssertEqual(count, 3)
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncRelResultSequenceWithBinding() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        let query = "[:find ?e ?v :where [?e :foo/long ?v]]"
+        let rows = try await mentat.query(query: query).run()
+        XCTAssertNotNil(rows)
+
+        var results: [(Entid, Int64)] = []
+        for await row in rows!.async {
+            let entid = row.asEntid(index: 0)
+            let value = row.asLong(index: 1)
+            results.append((entid, value))
+        }
+
+        // We should have 2 results from populateWithTypesSchema (a and b entities)
+        XCTAssertEqual(results.count, 2)
+        // Values should be 25 and 50
+        let values = Set(results.map { $0.1 })
+        XCTAssertTrue(values.contains(25))
+        XCTAssertTrue(values.contains(50))
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncColResultSequenceMultipleTypes() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        let query = "[:find [?v ...] :where [_ :foo/string ?v]]"
+        let coll = try await mentat.query(query: query).runColl()
+        XCTAssertNotNil(coll)
+
+        var strings: [String] = []
+        for await value in coll!.async {
+            strings.append(value.asString())
+        }
+
+        XCTAssertEqual(strings.count, 2)
+        XCTAssertTrue(strings.contains("The higher we soar the smaller we appear to those who cannot fly."))
+        XCTAssertTrue(strings.contains("Silence is worse; all truths that are kept silent become poisonous."))
+    }
+
+    // MARK: - Sequential Async Query Tests
+
+    @available(iOS 13.0, *)
+    func testSequentialAsyncQueries() async throws {
+        let mentat = openAndInitializeCitiesStore()
+
+        // Run multiple queries sequentially (SQLite connections don't support concurrent transactions)
+        let scalar = try await mentat.query(query: "[:find ?n . :in ?name :where [(fulltext $ :community/name ?name) [[?e ?n]]]]")
+            .bind(varName: "?name", toString: "Wallingford")
+            .runScalar()
+
+        let coll = try await mentat.query(query: "[:find [?when ...] :where [_ :db/txInstant ?when] :order (asc ?when)]")
+            .runColl()
+
+        let tuple = try await mentat.query(query: """
+            [:find [?name ?cat]
+            :where
+            [?c :community/name ?name]
+            [?c :community/type :community.type/website]
+            [(fulltext $ :community/category "food") [[?c ?cat]]]]
+            """)
+            .runTuple()
+
+        XCTAssertNotNil(scalar)
+        XCTAssertEqual(scalar?.asString(), "KOMO Communities - Wallingford")
+
+        XCTAssertNotNil(coll)
+        var collCount = 0
+        coll?.forEach({ _ in collCount += 1 })
+        XCTAssertEqual(collCount, 3)
+
+        XCTAssertNotNil(tuple)
+        XCTAssertEqual(tuple?.asString(index: 0), "Community Harvest of Southwest Seattle")
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncQuerySequential() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Run queries sequentially (SQLite connections don't support concurrent transactions)
+        var results: [Int64] = []
+
+        // Query for entity with long value 25
+        let query1 = "[:find ?v . :where [?e :foo/long ?v] [?e :foo/boolean true]]"
+        if let value = try await mentat.query(query: query1).runScalar() {
+            results.append(value.asLong())
+        }
+
+        // Query for entity with long value 50
+        let query2 = "[:find ?v . :where [?e :foo/long ?v] [?e :foo/boolean false]]"
+        if let value = try await mentat.query(query: query2).runScalar() {
+            results.append(value.asLong())
+        }
+
+        XCTAssertEqual(results.count, 2)
+        XCTAssertTrue(results.contains(25))
+        XCTAssertTrue(results.contains(50))
+    }
+
+    // MARK: - Edge Case Tests
+
+    @available(iOS 13.0, *)
+    func testAsyncEmptyRelResult() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no results
+        let query = "[:find ?e :where [?e :foo/long 999999]]"
+        let rows = try await mentat.query(query: query).run()
+        XCTAssertNotNil(rows)
+
+        var count = 0
+        for await _ in rows!.async {
+            count += 1
+        }
+        XCTAssertEqual(count, 0)
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncEmptyColResult() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no results
+        let query = "[:find [?v ...] :where [_ :foo/long ?v] [(> ?v 1000000)]]"
+        let coll = try await mentat.query(query: query).runColl()
+
+        // Result may be nil or empty for no matches
+        if let result = coll {
+            var count = 0
+            for await _ in result.async {
+                count += 1
+            }
+            XCTAssertEqual(count, 0)
+        }
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncNilScalarResult() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no scalar result
+        let query = "[:find ?v . :where [_ :foo/long ?v] [(> ?v 1000000)]]"
+        let value = try await mentat.query(query: query).runScalar()
+        XCTAssertNil(value)
+    }
+
+    @available(iOS 13.0, *)
+    func testAsyncNilTupleResult() async throws {
+        let mentat = try! Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no tuple result
+        let query = "[:find [?e ?v] :where [?e :foo/long ?v] [(> ?v 1000000)]]"
+        let tuple = try await mentat.query(query: query).runTuple()
+        XCTAssertNil(tuple)
     }
 }

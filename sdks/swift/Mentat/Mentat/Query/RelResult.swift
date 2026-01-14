@@ -116,3 +116,73 @@ extension RelResult: Sequence {
         }
     }
 }
+
+// MARK: - AsyncSequence Conformance
+
+/**
+ Async iterator for `RelResult`.
+
+ Enables async iteration over query results using `for await`:
+
+ ```swift
+ let result = try await mentat.query(query: query).run()
+ if let rows = result {
+     for await row in rows.async {
+         // Process each row asynchronously
+     }
+ }
+ ```
+ */
+public struct AsyncRelResultIterator: AsyncIteratorProtocol {
+    public typealias Element = TupleResult
+
+    private var iterator: RelResultIterator
+
+    init(iterator: RelResultIterator) {
+        self.iterator = iterator
+    }
+
+    public mutating func next() async -> Element? {
+        return iterator.next()
+    }
+}
+
+/**
+ Async sequence wrapper for `RelResult`.
+
+ Access via the `.async` property on `RelResult`:
+
+ ```swift
+ for await row in result.async {
+     // Process row
+ }
+ ```
+ */
+public struct AsyncRelResultSequence: AsyncSequence, Sendable {
+    public typealias Element = TupleResult
+    public typealias AsyncIterator = AsyncRelResultIterator
+
+    private let result: RelResult
+
+    init(result: RelResult) {
+        self.result = result
+    }
+
+    public func makeAsyncIterator() -> AsyncRelResultIterator {
+        return AsyncRelResultIterator(iterator: result.makeIterator())
+    }
+}
+
+extension RelResult {
+    /// Returns an async sequence wrapper for iterating over results using `for await`.
+    ///
+    /// ```swift
+    /// let result = try await mentat.query(query: query).run()
+    /// for await row in result?.async ?? AsyncRelResultSequence(result: RelResult(raw: nil)) {
+    ///     print(row.asString(index: 0))
+    /// }
+    /// ```
+    public var async: AsyncRelResultSequence {
+        return AsyncRelResultSequence(result: self)
+    }
+}

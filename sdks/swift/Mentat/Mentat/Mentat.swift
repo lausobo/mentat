@@ -43,7 +43,7 @@ public enum CacheDirection {
     case both;
 }
 
-/// Thread-safe storage for transaction observers
+/// Thread-safe storage for transaction observers (deprecated pattern)
 private final class ObserverStorage: @unchecked Sendable {
     private var observers = [String: any Observing]()
     private let lock = NSLock()
@@ -64,6 +64,30 @@ private final class ObserverStorage: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         observers.removeValue(forKey: key)
+    }
+}
+
+/// Thread-safe storage for AsyncStream continuations (modern pattern)
+private final class StreamContinuationStorage: @unchecked Sendable {
+    private var continuations = [String: AsyncStream<[TxChange]>.Continuation]()
+    private let lock = NSLock()
+
+    func get(_ key: String) -> AsyncStream<[TxChange]>.Continuation? {
+        lock.lock()
+        defer { lock.unlock() }
+        return continuations[key]
+    }
+
+    func set(_ key: String, continuation: AsyncStream<[TxChange]>.Continuation) {
+        lock.lock()
+        defer { lock.unlock() }
+        continuations[key] = continuation
+    }
+
+    func remove(_ key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        continuations.removeValue(forKey: key)
     }
 }
 
@@ -114,6 +138,18 @@ private final class ObserverStorage: @unchecked Sendable {
 */
 open class Mentat: RustObject, @unchecked Sendable {
     fileprivate static let observerStorage = ObserverStorage()
+    fileprivate static let streamStorage = StreamContinuationStorage()
+
+    /// Counter for generating unique stream keys (access protected by streamKeyLock)
+    nonisolated(unsafe) private static var streamKeyCounter: UInt64 = 0
+    private static let streamKeyLock = NSLock()
+
+    private static func nextStreamKey() -> String {
+        streamKeyLock.lock()
+        defer { streamKeyLock.unlock() }
+        streamKeyCounter += 1
+        return "stream_\(streamKeyCounter)"
+    }
 
     /**
      Create a new Mentat with the provided pointer to a Mentat Store
@@ -266,6 +302,74 @@ open class Mentat: RustObject, @unchecked Sendable {
         }));
     }
 
+    // MARK: - Transaction Observation (Modern AsyncStream API)
+
+    /**
+     Observe transactions affecting the specified attributes using modern Swift concurrency.
+
+     This method returns an `AsyncStream` that yields arrays of `TxChange` whenever a transaction
+     occurs that affects any of the specified attributes.
+
+     ## Usage
+
+     ```swift
+     let stream = mentat.transactionStream(for: [":user/name", ":user/email"])
+
+     Task {
+         for await changes in stream {
+             for change in changes {
+                 print("Entity \(change.entid) was modified")
+             }
+         }
+     }
+     ```
+
+     ## Cancellation
+
+     The stream automatically unregisters from transaction observation when:
+     - The `Task` consuming the stream is cancelled
+     - The stream is no longer being iterated
+
+     - Parameter attributes: An array of attribute keywords to observe (e.g., `":user/name"`)
+     - Returns: An `AsyncStream` that yields `[TxChange]` arrays when transactions occur
+     */
+    open func transactionStream(for attributes: [String]) -> AsyncStream<[TxChange]> {
+        let streamKey = Mentat.nextStreamKey()
+        let mentatRaw = self.raw
+
+        // Wrap the raw pointer for safe capture in @Sendable closure
+        // This is safe because the Mentat instance manages the pointer lifecycle
+        nonisolated(unsafe) let sendableRaw = mentatRaw
+
+        return AsyncStream { continuation in
+            // Convert attribute keywords to entids
+            let attrEntIds = attributes.map { kw -> Entid in
+                Entid(store_entid_for_attribute(mentatRaw, kw))
+            }
+
+            let ptr = UnsafeMutablePointer<Entid>.allocate(capacity: attrEntIds.count)
+            let entidPointer = UnsafeMutableBufferPointer(start: ptr, count: attrEntIds.count)
+            _ = entidPointer.initialize(from: attrEntIds)
+
+            guard let firstElement = entidPointer.baseAddress else {
+                continuation.finish()
+                return
+            }
+
+            // Store the continuation for the callback to use
+            Mentat.streamStorage.set(streamKey, continuation: continuation)
+
+            // Register with Rust FFI
+            store_register_observer(mentatRaw, streamKey, firstElement, Entid(attributes.count), transactionStreamCallback)
+
+            // Handle cancellation
+            continuation.onTermination = { @Sendable _ in
+                Mentat.streamStorage.remove(streamKey)
+                store_unregister_observer(sendableRaw, streamKey)
+            }
+        }
+    }
+
     // Destroys the pointer by passing it back into Rust to be cleaned up
     override open func cleanup(pointer: OpaquePointer) {
         store_destroy(pointer)
@@ -330,4 +434,15 @@ private func transactionObserverCallback(key: UnsafePointer<CChar>, reports: Uns
     DispatchQueue.global(qos: .background).async {
         observer.transactionDidOccur(key: key, reports: [TxChange]())
     }
+}
+
+/**
+ Callback function for AsyncStream-based transaction observation.
+ This function yields values to the stored continuation when transactions occur.
+ */
+private func transactionStreamCallback(key: UnsafePointer<CChar>, reports: UnsafePointer<TxChangeList>) {
+    let key = String(cString: key)
+    guard let continuation = Mentat.streamStorage.get(key) else { return }
+    // TODO: Parse TxChangeList into [TxChange] when FFI support is available
+    continuation.yield([TxChange]())
 }
