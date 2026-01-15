@@ -7,10 +7,11 @@ on:
 jobs:
   test:
     runs-on: macos-12
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.25.0, stable, beta, nightly]
+        rust: [stable, beta, nightly]
     continue-on-error: ${{ matrix.rust == 'nightly' }}
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
 
   test-ios:
     runs-on: macos-12
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
@@ -43,11 +45,12 @@ jobs:
 
   docs:
     runs-on: macos-12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.25.0
+          toolchain: stable
       - uses: Swatinem/rust-cache@v2
       - name: Install sqlcipher
         run: brew install sqlcipher
