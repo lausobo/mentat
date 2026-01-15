@@ -1149,4 +1149,143 @@ class MentatTests: XCTestCase {
         let tuple = try mentat.query(query: query).runTuple()
         XCTAssertNil(tuple)
     }
+
+    // MARK: - Async Query Execution Tests (runAsync, runScalarAsync, etc.)
+
+    @available(iOS 13.0, *)
+    func testRunAsync() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = """
+        [:find ?name ?cat
+        :where
+        [?c :community/name ?name]
+        [?c :community/type :community.type/website]
+        [(fulltext $ :community/category "food") [[?c ?cat]]]]
+        """
+        let expectedResults: Set<String> = [
+            "InBallard|food",
+            "Seattle Chinatown Guide|food",
+            "Community Harvest of Southwest Seattle|sustainable food",
+            "University District Food Bank|food bank"
+        ]
+        let rows = try await mentat.query(query: query).runAsync()
+        XCTAssertNotNil(rows)
+        var actualResults: Set<String> = []
+        for row in rows! {
+            let name = row.asString(index: 0)
+            let category = row.asString(index: 1)
+            actualResults.insert("\(name)|\(category)")
+        }
+        XCTAssertEqual(actualResults, expectedResults)
+    }
+
+    @available(iOS 13.0, *)
+    func testRunScalarAsync() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = "[:find ?n . :in ?name :where [(fulltext $ :community/name ?name) [[?e ?n]]]]"
+        let result = try await mentat.query(query: query)
+            .bind(varName: "?name", toString: "Wallingford")
+            .runScalarAsync()
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.asString(), "KOMO Communities - Wallingford")
+    }
+
+    @available(iOS 13.0, *)
+    func testRunCollAsync() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = "[:find [?when ...] :where [_ :db/txInstant ?when] :order (asc ?when)]"
+        let rows = try await mentat.query(query: query).runCollAsync()
+        XCTAssertNotNil(rows)
+        // we are expecting 3 results
+        for i in 0..<3 {
+            XCTAssertNotNil(rows?.asDate(index: i))
+        }
+    }
+
+    @available(iOS 13.0, *)
+    func testRunTupleAsync() async throws {
+        let mentat = openAndInitializeCitiesStore()
+        let query = """
+        [:find [?name ?cat]
+        :where
+        [?c :community/name ?name]
+        [?c :community/type :community.type/website]
+        [(fulltext $ :community/category "food") [[?c ?cat]]]]
+        """
+        let tuple = try await mentat.query(query: query).runTupleAsync()
+        XCTAssertNotNil(tuple)
+        XCTAssertEqual(tuple?.asString(index: 0), "Community Harvest of Southwest Seattle")
+        XCTAssertEqual(tuple?.asString(index: 1), "sustainable food")
+    }
+
+    @available(iOS 13.0, *)
+    func testRunAsyncWithBinding() async throws {
+        let mentat = try Mentat.open()
+        let (_, report) = self.populateWithTypesSchema(mentat: mentat)
+        let aEntid = report!.entid(forTempId: "a")
+        let query = "[:find ?e . :in ?long :where [?e :foo/long ?long]]"
+        let value = try await mentat.query(query: query)
+            .bind(varName: "?long", toLong: 25)
+            .runScalarAsync()
+        XCTAssertNotNil(value)
+        XCTAssertEqual(value?.asEntid(), aEntid)
+    }
+
+    @available(iOS 13.0, *)
+    func testRunAsyncReturnsNilForNoResults() async throws {
+        let mentat = try Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no scalar result
+        let query = "[:find ?v . :where [_ :foo/long ?v] [(> ?v 1000000)]]"
+        let value = try await mentat.query(query: query).runScalarAsync()
+        XCTAssertNil(value)
+    }
+
+    @available(iOS 13.0, *)
+    func testRunTupleAsyncReturnsNilForNoResults() async throws {
+        let mentat = try Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no tuple result
+        let query = "[:find [?e ?v] :where [?e :foo/long ?v] [(> ?v 1000000)]]"
+        let tuple = try await mentat.query(query: query).runTupleAsync()
+        XCTAssertNil(tuple)
+    }
+
+    @available(iOS 13.0, *)
+    func testRunCollAsyncEmpty() async throws {
+        let mentat = try Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no results
+        let query = "[:find [?v ...] :where [_ :foo/long ?v] [(> ?v 1000000)]]"
+        let coll = try await mentat.query(query: query).runCollAsync()
+
+        // Result may be nil or empty for no matches
+        if let result = coll {
+            var count = 0
+            for _ in result {
+                count += 1
+            }
+            XCTAssertEqual(count, 0)
+        }
+    }
+
+    @available(iOS 13.0, *)
+    func testRunAsyncEmpty() async throws {
+        let mentat = try Mentat.open()
+        let _ = self.populateWithTypesSchema(mentat: mentat)
+
+        // Query that returns no results
+        let query = "[:find ?e :where [?e :foo/long 999999]]"
+        let rows = try await mentat.query(query: query).runAsync()
+        XCTAssertNotNil(rows)
+
+        var count = 0
+        for _ in rows! {
+            count += 1
+        }
+        XCTAssertEqual(count, 0)
+    }
 }
