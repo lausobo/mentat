@@ -31,7 +31,7 @@ import MentatStore
 
  Each bound variable must have a corresponding value in the query string used to create this query.
 
- ## Basic Usage (async/await)
+ ## Basic Usage
 
  ```swift
  let query = """
@@ -43,7 +43,7 @@ import MentatStore
       [?c :community/category ?cat]]
      """
 
- let result = try await mentat.query(query: query)
+ let result = try mentat.query(query: query)
      .bind(varName: "?type", toKeyword: ":community.type/website")
      .run()
 
@@ -52,6 +52,15 @@ import MentatStore
      let category = row.asString(index: 1)
      print("\(name): \(category)")
  }
+ ```
+
+ ## Async Usage (off main thread)
+
+ For long-running queries, use the async variants to avoid blocking:
+ ```swift
+ let result = try await mentat.query(query: query)
+     .bind(varName: "?type", toKeyword: ":community.type/website")
+     .runAsync()
  ```
 
  ## Result Formats
@@ -63,33 +72,34 @@ import MentatStore
  Returns a list of rows of values. Use `run()`:
  ```swift
  let query = "[:find ?a ?b ?c :where ...]"
- let result = try await mentat.query(query: query).run()
+ let result = try mentat.query(query: query).run()
  ```
 
  ### Scalar
  Returns a single value (optional). Use `runScalar()`:
  ```swift
  let query = "[:find ?a . :where ...]"
- let value = try await mentat.query(query: query).runScalar()
+ let value = try mentat.query(query: query).runScalar()
  ```
 
  ### Coll
  Returns a list of single values. Use `runColl()`:
  ```swift
  let query = "[:find [?a ...] :where ...]"
- let values = try await mentat.query(query: query).runColl()
+ let values = try mentat.query(query: query).runColl()
  ```
 
  ### Tuple
  Returns a single row of values. Use `runTuple()`:
  ```swift
  let query = "[:find [?a ?b ?c] :where ...]"
- let tuple = try await mentat.query(query: query).runTuple()
+ let tuple = try mentat.query(query: query).runTuple()
  ```
 
  ## Thread Safety
 
- This class conforms to `Sendable` and can be safely used across actor boundaries.
+ Query objects are single-use builders - after calling a run method, the query is consumed.
+ For thread-safe usage, create a new Query for each thread or use the async variants.
  */
 open class Query: OptionalRustObject, @unchecked Sendable {
 
@@ -234,181 +244,144 @@ open class Query: OptionalRustObject, @unchecked Sendable {
         return self
     }
 
-    /**
-     Execute the query with the values bound associated with this `Query` and call the provided callback function with the results as a list of rows of `TypedValues`.
+    // MARK: - Query Execution (Synchronous)
 
-     - Parameter callback: the function to call with the results of this query
+    /**
+     Execute the query with the values bound associated with this `Query` and return the results as a list of rows.
 
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, or that
-     variable we incorrectly bound, or that the query provided was not `Rel`.
+     variables were incorrectly bound, or that the query provided was not `Rel`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
 
-     - Note: This method is deprecated. Use the async version `run() async throws` instead.
+     - Returns: A `RelResult` containing the query results, or `nil` if no results.
      */
-    @available(*, deprecated, message: "Use async run() instead")
-    open func run(callback: @escaping (RelResult?) -> Void) throws {
+    open func run() throws -> RelResult? {
         var error = RustError(message: nil)
-        let result = query_builder_execute(try! self.validPointer(), &error);
+        let result = query_builder_execute(try self.validPointer(), &error)
         self.raw = nil
 
         if let err = error.message {
-            let message = String(destroyingRustString: err)
-            throw QueryError.executionFailed(message: message)
+            throw QueryError.executionFailed(message: String(destroyingRustString: err))
         }
-        guard let results = result else {
-            callback(nil)
-            return
-        }
-        callback(RelResult(raw: results))
-    }
-
-    /// Execute the query asynchronously and return the results as a list of rows.
-    ///
-    /// - Returns: A `RelResult` containing the query results, or `nil` if no results.
-    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
-    open func run() async throws -> RelResult? {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<RelResult?, Error>) in
-            do {
-                try run { result in
-                    continuation.resume(returning: result)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        return result.map { RelResult(raw: $0) }
     }
 
     /**
-     Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a single `TypedValue`.
-
-     - Parameter callback: the function to call with the results of this query
+     Execute the query with the values bound associated with this `Query` and return a single scalar value.
 
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
-     variable we incorrectly bound, or that the query provided was not `Scalar`.
+     variables were incorrectly bound, or that the query provided was not `Scalar`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
 
-     - Note: This method is deprecated. Use the async version `runScalar() async throws` instead.
+     - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
      */
-    @available(*, deprecated, message: "Use async runScalar() instead")
-    open func runScalar(callback: @escaping (TypedValue?) -> Void) throws {
+    open func runScalar() throws -> TypedValue? {
         var error = RustError(message: nil)
-        let result = query_builder_execute_scalar(try! self.validPointer(), &error)
+        let result = query_builder_execute_scalar(try self.validPointer(), &error)
         self.raw = nil
 
         if let err = error.message {
-            let message = String(destroyingRustString: err)
-            throw QueryError.executionFailed(message: message)
+            throw QueryError.executionFailed(message: String(destroyingRustString: err))
         }
-        guard let results = result else {
-            callback(nil)
-            return
-        }
-        callback(TypedValue(raw: results))
-    }
-
-    /// Execute the query asynchronously and return a single scalar value.
-    ///
-    /// - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
-    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
-    open func runScalar() async throws -> TypedValue? {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TypedValue?, Error>) in
-            do {
-                try runScalar { result in
-                    continuation.resume(returning: result)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
-    }
-
-
-    /**
-     Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a list of single `TypedValues`.
-
-     - Parameter callback: the function to call with the results of this query
-
-     - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
-     variable we incorrectly bound, or that the query provided was not `Coll`.
-     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
-
-     - Note: This method is deprecated. Use the async version `runColl() async throws` instead.
-     */
-    @available(*, deprecated, message: "Use async runColl() instead")
-    open func runColl(callback: @escaping (ColResult?) -> Void) throws {
-        var error = RustError(message: nil)
-        let result = query_builder_execute_coll(try! self.validPointer(), &error)
-        self.raw = nil
-
-        if let err = error.message {
-            let message = String(destroyingRustString: err)
-            throw QueryError.executionFailed(message: message)
-        }
-        guard let results = result else {
-            callback(nil)
-            return
-        }
-        callback(ColResult(raw: results))
-    }
-
-    /// Execute the query asynchronously and return a collection of single values.
-    ///
-    /// - Returns: A `ColResult` containing the collection results, or `nil` if no results.
-    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
-    open func runColl() async throws -> ColResult? {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ColResult?, Error>) in
-            do {
-                try runColl { result in
-                    continuation.resume(returning: result)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        return result.map { TypedValue(raw: $0) }
     }
 
     /**
-     Execute the query with the values bound associated with this `Query` and call the provided callback function with the result as a list of single `TypedValues`.
-
-     - Parameter callback: the function to call with the results of this query
+     Execute the query with the values bound associated with this `Query` and return a collection of single values.
 
      - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
-     variable we incorrectly bound, or that the query provided was not `Tuple`.
+     variables were incorrectly bound, or that the query provided was not `Coll`.
      - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
 
-     - Note: This method is deprecated. Use the async version `runTuple() async throws` instead.
+     - Returns: A `ColResult` containing the collection results, or `nil` if no results.
      */
-    @available(*, deprecated, message: "Use async runTuple() instead")
-    open func runTuple(callback: @escaping (TupleResult?) -> Void) throws {
+    open func runColl() throws -> ColResult? {
         var error = RustError(message: nil)
-        let result = query_builder_execute_tuple(try! self.validPointer(), &error)
+        let result = query_builder_execute_coll(try self.validPointer(), &error)
         self.raw = nil
 
         if let err = error.message {
-            let message = String(destroyingRustString: err)
-            throw QueryError.executionFailed(message: message)
+            throw QueryError.executionFailed(message: String(destroyingRustString: err))
         }
-        guard let results = result else {
-            callback(nil)
-            return
-        }
-        callback(TupleResult(raw: results))
+        return result.map { ColResult(raw: $0) }
     }
 
-    /// Execute the query asynchronously and return a single tuple of values.
-    ///
-    /// - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
-    /// - Throws: `QueryError.executionFailed` if the query fails to execute.
-    open func runTuple() async throws -> TupleResult? {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<TupleResult?, Error>) in
-            do {
-                try runTuple { result in
-                    continuation.resume(returning: result)
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
+    /**
+     Execute the query with the values bound associated with this `Query` and return a single tuple of values.
+
+     - Throws: `QueryError.executionFailed` if the query fails to execute. This could be because the provided query did not parse, that
+     variables were incorrectly bound, or that the query provided was not `Tuple`.
+     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed, which will occur if the query has previously been executed.
+
+     - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
+     */
+    open func runTuple() throws -> TupleResult? {
+        var error = RustError(message: nil)
+        let result = query_builder_execute_tuple(try self.validPointer(), &error)
+        self.raw = nil
+
+        if let err = error.message {
+            throw QueryError.executionFailed(message: String(destroyingRustString: err))
         }
+        return result.map { TupleResult(raw: $0) }
+    }
+
+    // MARK: - Query Execution (Async - runs off main thread)
+
+    /**
+     Execute the query asynchronously, running the FFI call off the main thread.
+
+     Use this variant for potentially long-running queries to avoid blocking the main thread.
+
+     - Returns: A `RelResult` containing the query results, or `nil` if no results.
+     - Throws: `QueryError.executionFailed` if the query fails to execute.
+     */
+    open func runAsync() async throws -> RelResult? {
+        try await Task.detached(priority: .userInitiated) {
+            try self.run()
+        }.value
+    }
+
+    /**
+     Execute the query asynchronously, running the FFI call off the main thread.
+
+     Use this variant for potentially long-running queries to avoid blocking the main thread.
+
+     - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
+     - Throws: `QueryError.executionFailed` if the query fails to execute.
+     */
+    open func runScalarAsync() async throws -> TypedValue? {
+        try await Task.detached(priority: .userInitiated) {
+            try self.runScalar()
+        }.value
+    }
+
+    /**
+     Execute the query asynchronously, running the FFI call off the main thread.
+
+     Use this variant for potentially long-running queries to avoid blocking the main thread.
+
+     - Returns: A `ColResult` containing the collection results, or `nil` if no results.
+     - Throws: `QueryError.executionFailed` if the query fails to execute.
+     */
+    open func runCollAsync() async throws -> ColResult? {
+        try await Task.detached(priority: .userInitiated) {
+            try self.runColl()
+        }.value
+    }
+
+    /**
+     Execute the query asynchronously, running the FFI call off the main thread.
+
+     Use this variant for potentially long-running queries to avoid blocking the main thread.
+
+     - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
+     - Throws: `QueryError.executionFailed` if the query fails to execute.
+     */
+    open func runTupleAsync() async throws -> TupleResult? {
+        try await Task.detached(priority: .userInitiated) {
+            try self.runTuple()
+        }.value
     }
 
     override open func cleanup(pointer: OpaquePointer) {
