@@ -104,7 +104,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toLong value: Int64) throws -> Query {
-        query_builder_bind_long(try! self.validPointer(), varName, value)
+        query_builder_bind_long(try self.validPointer(), varName, value)
         return self
     }
 
@@ -119,7 +119,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toReference value: Entid) throws -> Query {
-        query_builder_bind_ref(try! self.validPointer(), varName, value)
+        query_builder_bind_ref(try self.validPointer(), varName, value)
         return self
     }
 
@@ -135,7 +135,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toReference value: String) throws -> Query {
-        query_builder_bind_ref_kw(try! self.validPointer(), varName, value)
+        query_builder_bind_ref_kw(try self.validPointer(), varName, value)
         return self
     }
 
@@ -151,7 +151,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toKeyword value: String) throws -> Query {
-        query_builder_bind_kw(try! self.validPointer(), varName, value)
+        query_builder_bind_kw(try self.validPointer(), varName, value)
         return self
     }
 
@@ -166,7 +166,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toBoolean value: Bool) throws -> Query {
-        query_builder_bind_boolean(try! self.validPointer(), varName, value ? 1 : 0)
+        query_builder_bind_boolean(try self.validPointer(), varName, value ? 1 : 0)
         return self
     }
 
@@ -181,7 +181,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toDouble value: Double) throws -> Query {
-        query_builder_bind_double(try! self.validPointer(), varName, value)
+        query_builder_bind_double(try self.validPointer(), varName, value)
         return self
     }
 
@@ -196,7 +196,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toDate value: Date) throws -> Query {
-        query_builder_bind_timestamp(try! self.validPointer(), varName, value.toMicroseconds())
+        query_builder_bind_timestamp(try self.validPointer(), varName, value.toMicroseconds())
         return self
     }
 
@@ -211,7 +211,7 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toString value: String) throws -> Query {
-        query_builder_bind_string(try! self.validPointer(), varName, value)
+        query_builder_bind_string(try self.validPointer(), varName, value)
         return self
     }
 
@@ -226,9 +226,10 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: This `Query` such that further function can be called.
      */
     open func bind(varName: String, toUuid value: UUID) throws -> Query {
+        let pointer = try self.validPointer()
         var rawUuid = value.uuid
         withUnsafePointer(to: &rawUuid) { uuidPtr in
-            query_builder_bind_uuid(try! self.validPointer(), varName, uuidPtr)
+            query_builder_bind_uuid(pointer, varName, uuidPtr)
         }
         return self
     }
