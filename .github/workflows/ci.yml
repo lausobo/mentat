@@ -6,11 +6,11 @@ on:
 
 jobs:
   test:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.25.0, stable, beta, nightly]
+        rust: [1.70.0, stable, beta, nightly]
     continue-on-error: ${{ matrix.rust == 'nightly' }}
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
       - name: Install sqlcipher
-        run: brew install sqlcipher
+        run: sudo apt-get update && sudo apt-get install -y libsqlcipher-dev
       - name: Run tests
         run: |
           cargo test --verbose --all
@@ -29,7 +29,7 @@ jobs:
           done
 
   test-ios:
-    runs-on: macos-12
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
@@ -42,14 +42,14 @@ jobs:
         run: ./scripts/test-ios.sh
 
   docs:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.25.0
+          toolchain: stable
       - uses: Swatinem/rust-cache@v2
       - name: Install sqlcipher
-        run: brew install sqlcipher
+        run: sudo apt-get update && sudo apt-get install -y libsqlcipher-dev
       - name: Build docs
         run: ./scripts/cargo-doc.sh

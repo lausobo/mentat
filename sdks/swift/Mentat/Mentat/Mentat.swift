@@ -352,6 +352,7 @@ open class Mentat: RustObject, @unchecked Sendable {
             _ = entidPointer.initialize(from: attrEntIds)
 
             guard let firstElement = entidPointer.baseAddress else {
+                ptr.deallocate()
                 continuation.finish()
                 return
             }
@@ -362,8 +363,12 @@ open class Mentat: RustObject, @unchecked Sendable {
             // Register with Rust FFI
             store_register_observer(mentatRaw, streamKey, firstElement, Entid(attributes.count), transactionStreamCallback)
 
-            // Handle cancellation
+            // Capture ptr for cleanup in @Sendable closure
+            nonisolated(unsafe) let sendablePtr = ptr
+
+            // Handle cancellation and cleanup
             continuation.onTermination = { @Sendable _ in
+                sendablePtr.deallocate()
                 Mentat.streamStorage.remove(streamKey)
                 store_unregister_observer(sendableRaw, streamKey)
             }

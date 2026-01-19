@@ -89,6 +89,9 @@ build.xcarchive
 **/.idea
 /sdks/android/**/local.properties
 
+# Swift
+/sdks/swift/Mentat/.build/
+
 # Documentation
 docs/_site
 docs/.sass-cache
