@@ -335,10 +335,20 @@ open class Query: OptionalRustObject, @unchecked Sendable {
 
      - Returns: A `RelResult` containing the query results, or `nil` if no results.
      - Throws: `QueryError.executionFailed` if the query fails to execute.
+     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed.
      */
     open func runAsync() async throws -> RelResult? {
-        try await Task.detached(priority: .userInitiated) {
-            try self.run()
+        // Capture and consume pointer on caller thread to avoid races
+        let pointer = try self.validPointer()
+        self.raw = nil
+
+        return try await Task.detached(priority: .userInitiated) {
+            var error = RustError(message: nil)
+            let result = query_builder_execute(pointer, &error)
+            if let err = error.message {
+                throw QueryError.executionFailed(message: String(destroyingRustString: err))
+            }
+            return result.map { RelResult(raw: $0) }
         }.value
     }
 
@@ -349,10 +359,20 @@ open class Query: OptionalRustObject, @unchecked Sendable {
 
      - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
      - Throws: `QueryError.executionFailed` if the query fails to execute.
+     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed.
      */
     open func runScalarAsync() async throws -> TypedValue? {
-        try await Task.detached(priority: .userInitiated) {
-            try self.runScalar()
+        // Capture and consume pointer on caller thread to avoid races
+        let pointer = try self.validPointer()
+        self.raw = nil
+
+        return try await Task.detached(priority: .userInitiated) {
+            var error = RustError(message: nil)
+            let result = query_builder_execute_scalar(pointer, &error)
+            if let err = error.message {
+                throw QueryError.executionFailed(message: String(destroyingRustString: err))
+            }
+            return result.map { TypedValue(raw: $0) }
         }.value
     }
 
@@ -363,10 +383,20 @@ open class Query: OptionalRustObject, @unchecked Sendable {
 
      - Returns: A `ColResult` containing the collection results, or `nil` if no results.
      - Throws: `QueryError.executionFailed` if the query fails to execute.
+     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed.
      */
     open func runCollAsync() async throws -> ColResult? {
-        try await Task.detached(priority: .userInitiated) {
-            try self.runColl()
+        // Capture and consume pointer on caller thread to avoid races
+        let pointer = try self.validPointer()
+        self.raw = nil
+
+        return try await Task.detached(priority: .userInitiated) {
+            var error = RustError(message: nil)
+            let result = query_builder_execute_coll(pointer, &error)
+            if let err = error.message {
+                throw QueryError.executionFailed(message: String(destroyingRustString: err))
+            }
+            return result.map { ColResult(raw: $0) }
         }.value
     }
 
@@ -377,10 +407,20 @@ open class Query: OptionalRustObject, @unchecked Sendable {
 
      - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
      - Throws: `QueryError.executionFailed` if the query fails to execute.
+     - Throws: `PointerError.pointerConsumed` if the underlying raw pointer has already consumed.
      */
     open func runTupleAsync() async throws -> TupleResult? {
-        try await Task.detached(priority: .userInitiated) {
-            try self.runTuple()
+        // Capture and consume pointer on caller thread to avoid races
+        let pointer = try self.validPointer()
+        self.raw = nil
+
+        return try await Task.detached(priority: .userInitiated) {
+            var error = RustError(message: nil)
+            let result = query_builder_execute_tuple(pointer, &error)
+            if let err = error.message {
+                throw QueryError.executionFailed(message: String(destroyingRustString: err))
+            }
+            return result.map { TupleResult(raw: $0) }
         }.value
     }
 
