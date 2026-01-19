@@ -256,9 +256,12 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: A `RelResult` containing the query results, or `nil` if no results.
      */
     open func run() throws -> RelResult? {
-        var error = RustError(message: nil)
-        let result = query_builder_execute(try self.validPointer(), &error)
+        let pointer = try self.validPointer()
         self.raw = nil
+        defer { query_builder_destroy(pointer) }
+
+        var error = RustError(message: nil)
+        let result = query_builder_execute(pointer, &error)
 
         if let err = error.message {
             throw QueryError.executionFailed(message: String(destroyingRustString: err))
@@ -276,9 +279,12 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: A `TypedValue` containing the scalar result, or `nil` if no result.
      */
     open func runScalar() throws -> TypedValue? {
-        var error = RustError(message: nil)
-        let result = query_builder_execute_scalar(try self.validPointer(), &error)
+        let pointer = try self.validPointer()
         self.raw = nil
+        defer { query_builder_destroy(pointer) }
+
+        var error = RustError(message: nil)
+        let result = query_builder_execute_scalar(pointer, &error)
 
         if let err = error.message {
             throw QueryError.executionFailed(message: String(destroyingRustString: err))
@@ -296,9 +302,12 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: A `ColResult` containing the collection results, or `nil` if no results.
      */
     open func runColl() throws -> ColResult? {
-        var error = RustError(message: nil)
-        let result = query_builder_execute_coll(try self.validPointer(), &error)
+        let pointer = try self.validPointer()
         self.raw = nil
+        defer { query_builder_destroy(pointer) }
+
+        var error = RustError(message: nil)
+        let result = query_builder_execute_coll(pointer, &error)
 
         if let err = error.message {
             throw QueryError.executionFailed(message: String(destroyingRustString: err))
@@ -316,9 +325,12 @@ open class Query: OptionalRustObject, @unchecked Sendable {
      - Returns: A `TupleResult` containing the tuple result, or `nil` if no result.
      */
     open func runTuple() throws -> TupleResult? {
-        var error = RustError(message: nil)
-        let result = query_builder_execute_tuple(try self.validPointer(), &error)
+        let pointer = try self.validPointer()
         self.raw = nil
+        defer { query_builder_destroy(pointer) }
+
+        var error = RustError(message: nil)
+        let result = query_builder_execute_tuple(pointer, &error)
 
         if let err = error.message {
             throw QueryError.executionFailed(message: String(destroyingRustString: err))
@@ -343,6 +355,8 @@ open class Query: OptionalRustObject, @unchecked Sendable {
         self.raw = nil
 
         return try await Task.detached(priority: .userInitiated) {
+            defer { query_builder_destroy(pointer) }
+
             var error = RustError(message: nil)
             let result = query_builder_execute(pointer, &error)
             if let err = error.message {
@@ -367,6 +381,8 @@ open class Query: OptionalRustObject, @unchecked Sendable {
         self.raw = nil
 
         return try await Task.detached(priority: .userInitiated) {
+            defer { query_builder_destroy(pointer) }
+
             var error = RustError(message: nil)
             let result = query_builder_execute_scalar(pointer, &error)
             if let err = error.message {
@@ -391,6 +407,8 @@ open class Query: OptionalRustObject, @unchecked Sendable {
         self.raw = nil
 
         return try await Task.detached(priority: .userInitiated) {
+            defer { query_builder_destroy(pointer) }
+
             var error = RustError(message: nil)
             let result = query_builder_execute_coll(pointer, &error)
             if let err = error.message {
@@ -415,6 +433,8 @@ open class Query: OptionalRustObject, @unchecked Sendable {
         self.raw = nil
 
         return try await Task.detached(priority: .userInitiated) {
+            defer { query_builder_destroy(pointer) }
+
             var error = RustError(message: nil)
             let result = query_builder_execute_tuple(pointer, &error)
             if let err = error.message {
